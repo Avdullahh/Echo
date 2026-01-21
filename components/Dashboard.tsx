@@ -4,7 +4,7 @@ import { UserProfile, RiskLevel } from '../types';
 import { Overview } from './Overview';
 import { Reports } from './Reports';
 import { Settings } from './Settings';
-import { LogOut, LayoutDashboard, FileText, Settings as SettingsIcon, Home, User, Eye, Shield, ArrowRight, ShieldAlert } from 'lucide-react';
+import { LogOut, LayoutDashboard, FileText, Settings as SettingsIcon, Home, User, Eye, Shield, ArrowRight, ShieldAlert, Lock } from 'lucide-react';
 
 export type DashboardTab = 'home' | 'overview' | 'reports' | 'settings';
 export type PrivacyLevel = 'strict' | 'balanced' | 'custom';
@@ -19,10 +19,11 @@ interface DashboardProps {
   onClose: () => void;
   activeTab: DashboardTab;
   onTabChange: (tab: DashboardTab) => void;
-  showToast: (msg: string, type?: 'info' | 'alert' | 'success') => void;
   onOpenEntity: (entity: any) => void;
   onOpenPersona: () => void;
   onTriggerIntervention: () => void;
+  onStartTutorial: (id: string) => void;
+  onTriggerStrictBlock: () => void;
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({ 
@@ -35,10 +36,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
     onClose, 
     activeTab, 
     onTabChange,
-    showToast,
     onOpenEntity,
     onOpenPersona,
-    onTriggerIntervention
+    onTriggerIntervention,
+    onStartTutorial,
+    onTriggerStrictBlock
 }) => {
   
   // Calculate Stats for Overview
@@ -51,9 +53,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
       time: 'Just now'
   }));
 
-  const TutorialCard = ({ icon: Icon, title, desc }: { icon: any, title: string, desc: string }) => (
+  const TutorialCard = ({ icon: Icon, title, desc, id }: { icon: any, title: string, desc: string, id: string }) => (
     <button 
-        onClick={() => showToast(`Starting tutorial: ${title}`, 'info')}
+        onClick={() => onStartTutorial(id)}
         className="bg-zinc-900 hover:bg-zinc-800 p-6 rounded-3xl text-left transition-all border border-transparent hover:border-zinc-700 group h-full flex flex-col justify-between"
     >
         <div>
@@ -129,7 +131,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                             Welcome to Echo. <br/>
                             <span className="text-zinc-500">Your digital footprint is secure.</span>
                         </h1>
-                        <div className="flex gap-4">
+                        <div className="flex flex-wrap gap-4">
                             <button 
                                 onClick={() => onTabChange('overview')}
                                 className="px-8 py-4 bg-[#4DFFBC] hover:opacity-90 text-black font-bold rounded-full transition-all flex items-center gap-2"
@@ -138,10 +140,17 @@ export const Dashboard: React.FC<DashboardProps> = ({
                             </button>
                             <button 
                                 onClick={onTriggerIntervention}
-                                className="px-8 py-4 bg-black text-white hover:bg-zinc-800 font-bold rounded-full transition-all flex items-center gap-2"
+                                className="px-6 py-4 bg-black text-white hover:bg-zinc-800 font-bold rounded-full transition-all flex items-center gap-2 border border-zinc-800"
                             >
                                 <ShieldAlert className="w-4 h-4" />
                                 Test Intervention
+                            </button>
+                             <button 
+                                onClick={onTriggerStrictBlock}
+                                className="px-6 py-4 bg-red-950/30 text-[#FF4D4D] hover:bg-red-900/40 border border-[#FF4D4D]/20 font-bold rounded-full transition-all flex items-center gap-2"
+                            >
+                                <Lock className="w-4 h-4" />
+                                Test Strict Block
                             </button>
                         </div>
                     </div>
@@ -152,16 +161,19 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     <h2 className="text-2xl font-bold text-white mb-6 pl-2">Privacy Academy</h2>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 h-64">
                         <TutorialCard 
+                            id="identity"
                             icon={User} 
                             title="Digital Identity 101" 
                             desc="Learn how advertisers build a profile of you based on your clicks." 
                         />
                         <TutorialCard 
+                            id="trackers"
                             icon={Eye} 
                             title="How Trackers Follow You" 
                             desc="Understand the invisible scripts that monitor your journey across the web." 
                         />
                         <TutorialCard 
+                            id="modes"
                             icon={Shield} 
                             title="Privacy Modes Explained" 
                             desc="Discover the difference between Strict, Balanced, and Custom protection." 

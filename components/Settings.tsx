@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Trash2, Shield, Bell, CheckCircle2, Sliders } from 'lucide-react';
 import { PrivacyLevel } from './Dashboard';
@@ -11,8 +12,7 @@ interface SettingsProps {
 export const Settings: React.FC<SettingsProps> = ({ currentLevel, setLevel, onClearData }) => {
   const [toggles, setToggles] = useState({
       marketing: true,
-      analytics: true,
-      notifications: true
+      analytics: true
   });
 
   const toggleSwitch = (key: keyof typeof toggles) => {
@@ -93,21 +93,6 @@ export const Settings: React.FC<SettingsProps> = ({ currentLevel, setLevel, onCl
                             ${toggles.analytics ? 'bg-[#4DFFBC]' : 'bg-zinc-700'}`}
                     >
                         <div className={`w-6 h-6 rounded-full bg-white shadow-sm transition-transform ${toggles.analytics ? 'translate-x-6' : 'translate-x-0'}`}></div>
-                    </button>
-                </div>
-
-                 {/* Notifications */}
-                 <div className="p-6 flex items-center justify-between hover:bg-zinc-800/50 transition-colors">
-                    <div>
-                        <div className="font-bold text-white text-base">Show Notifications</div>
-                        <div className="text-sm text-zinc-500 mt-0.5">Get a friendly pop-up when we block something.</div>
-                    </div>
-                    <button 
-                        onClick={() => toggleSwitch('notifications')}
-                        className={`w-14 h-8 rounded-full transition-colors relative focus:outline-none flex items-center px-1
-                            ${toggles.notifications ? 'bg-[#4DFFBC]' : 'bg-zinc-700'}`}
-                    >
-                        <div className={`w-6 h-6 rounded-full bg-white shadow-sm transition-transform ${toggles.notifications ? 'translate-x-6' : 'translate-x-0'}`}></div>
                     </button>
                 </div>
             </div>
