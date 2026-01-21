@@ -1,0 +1,32 @@
+{
+    "configurations": [
+      {
+        "type": "chrome",
+        "request": "launch",
+        "name": "Launch Dashboard",
+        "file": "${workspaceFolder}/dashboard.html",
+        "webRoot": "${workspaceFolder}"
+      },
+      {
+        "type": "chrome",
+        "request": "launch",
+        "name": "Launch Popup",
+        "file": "${workspaceFolder}/popup.html",
+        "webRoot": "${workspaceFolder}"
+      },
+      {
+        "type": "chrome",
+        "request": "launch",
+        "name": "Launch Background Script",
+        "program": "${workspaceFolder}/${input:backgroundScriptPath}",
+        "webRoot": "${workspaceFolder}"
+      }
+    ],
+    "inputs": [
+      {
+        "type": "promptString",
+        "id": "backgroundScriptPath",
+        "description": "Enter the path to the background script (e.g., src/background/index.ts)"
+      }
+    ]
+  }
