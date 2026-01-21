@@ -1,3 +1,4 @@
+
 export enum RiskLevel {
   SAFE = 'SAFE',
   WARNING = 'WARNING',
@@ -5,12 +6,14 @@ export enum RiskLevel {
 }
 
 export interface TrackerEvent {
-  id: string;
+  id: string | number;
   domain: string;
-  company: string;
-  category: 'Marketing' | 'Analytics' | 'Functional' | 'Social';
-  riskLevel: RiskLevel;
+  category: string;
+  action: 'Blocked' | 'Allowed';
+  riskLevel?: RiskLevel;
   timestamp: string;
+  company?: string; // Enhanced for Entity Detail
+  dataCollected?: string[]; // Enhanced for Entity Detail
 }
 
 export interface UserProfile {
@@ -20,7 +23,8 @@ export interface UserProfile {
   confidenceScore: number; // 0 to 1
 }
 
-export interface SiteRule {
-  domain: string;
-  status: 'ALLOWED' | 'BLOCKED' | 'ESSENTIAL_ONLY';
+export interface OnboardingAnswers {
+  cooking: boolean;
+  tech: boolean;
+  shopping: boolean;
 }
