@@ -1,0 +1,5 @@
+{
+  "name": "Echo - Privacy Dashboard",
+  "description": "User Online Data Reflection and Analysis Tool. A privacy extension that visualizes digital identity and tracking.",
+  "requestFramePermissions": []
+}
