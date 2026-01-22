@@ -1,16 +1,16 @@
 import React from 'react';
-import { TrackerEvent, DashboardTab } from '../types'; // FIXED IMPORT
+import { TrackerEvent, DashboardTab } from '../../shared/types';
 import { Power, ChevronRight, LayoutDashboard, Settings, Activity, Shield, Home, FileText } from 'lucide-react';
 
-interface HomescreenProps {
-  trackers?: TrackerEvent[]; // Made optional to prevent strict errors
+interface ExtensionPopupProps {
+  trackers?: TrackerEvent[];
   blockedCount: number;
   isProtectionOn: boolean;
   setProtectionOn: (val: boolean) => void;
   onOpenDashboard: (tab: DashboardTab) => void;
 }
 
-export const Homescreen: React.FC<HomescreenProps> = ({ 
+export const ExtensionPopup: React.FC<ExtensionPopupProps> = ({ 
     blockedCount, 
     isProtectionOn, 
     setProtectionOn, 
@@ -34,6 +34,7 @@ export const Homescreen: React.FC<HomescreenProps> = ({
 
   return (
     <div className="w-full h-full flex flex-col font-sans text-text-primary overflow-hidden relative bg-bg-canvas selection:bg-accent-primary selection:text-neutral-0">
+      
       <div className="absolute top-[-20%] left-[-20%] w-[300px] h-[300px] bg-accent-softBg rounded-full blur-[80px] pointer-events-none opacity-60"></div>
 
       <div className="relative z-30 px-6 pt-6 pb-2 flex flex-col gap-4">
@@ -59,6 +60,7 @@ export const Homescreen: React.FC<HomescreenProps> = ({
         >
             <div className={`absolute inset-0 rounded-full blur-2xl transition-all duration-700 
                ${isProtectionOn ? 'bg-accent-primary/30' : 'bg-transparent'}`}></div>
+
             <div className={`w-36 h-36 rounded-full flex items-center justify-center transition-all duration-300 relative border-4
                 ${isProtectionOn 
                     ? 'bg-accent-primary border-accent-primary shadow-glowAccent scale-100' 
@@ -70,6 +72,7 @@ export const Homescreen: React.FC<HomescreenProps> = ({
                 />
             </div>
         </button>
+        
         <div className="text-center mt-6">
              <h2 className="text-h2 font-bold text-text-primary tracking-tight">
                 {isProtectionOn ? 'System Active' : 'System Paused'}

@@ -24,6 +24,5 @@ export interface UserProfile {
   confidenceScore: number;
 }
 
-// --- ADDED THESE TO FIX THE BUILD ---
 export type DashboardTab = 'home' | 'overview' | 'reports' | 'settings';
 export type PrivacyLevel = 'strict' | 'balanced' | 'custom';

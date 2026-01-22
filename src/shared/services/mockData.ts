@@ -9,8 +9,8 @@ export const MOCK_USER_PROFILE: UserProfile = {
 
 export const MOCK_REPORTS_DATA: TrackerEvent[] = [
   {
-    id: 101, // Fixed: Number instead of string 't1'
-    host: 'analytics.google.com', // Fixed: Added required 'host'
+    id: 101,
+    host: 'analytics.google.com',
     timestamp: '2023-10-27T10:30:00Z',
     domain: 'google.com',
     company: 'Google',
