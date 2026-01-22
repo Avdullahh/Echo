@@ -8,18 +8,23 @@ const PopupApp = () => {
   const [isProtectionOn, setProtectionOn] = useState(true);
 
   return (
-    <div className="w-[350px] h-[600px] bg-bg-canvas text-text-primary">
+    // Style: 286px x 462px (10% larger), Sharp Edges, Filled Background
+    <div className="w-[286px] h-[462px] bg-bg-canvas text-text-primary overflow-hidden border border-border-subtle shadow-2xl">
       <ExtensionPopup 
         trackers={MOCK_REPORTS_DATA}
         blockedCount={14}
         isProtectionOn={isProtectionOn}
         setProtectionOn={setProtectionOn}
         onOpenDashboard={(tab) => {
-            const section = typeof tab === 'string' ? tab : 'home';
-            if (chrome.runtime.openOptionsPage) {
-                chrome.runtime.openOptionsPage();
+            // FIX: We explicitly build the URL with the hash (e.g., #reports)
+            const targetUrl = `dashboard.html#${tab}`;
+
+            // FIX: We use chrome.tabs.create because it respects the specific URL hash
+            if (typeof chrome !== 'undefined' && chrome.tabs) {
+                chrome.tabs.create({ url: targetUrl });
             } else {
-                window.open(`/dashboard.html#${section}`, '_blank');
+                // Fallback for local testing
+                window.open(targetUrl, '_blank');
             }
         }}
       />

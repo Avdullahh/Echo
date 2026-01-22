@@ -1,35 +1,37 @@
 document.addEventListener('DOMContentLoaded', () => {
     
-    // --- 1. NAVIGATION LOGIC ---
+    // --- 1. TAB SWITCHING (Handles 4 distinct pages) ---
     function switchTab(tabId) {
+        // Hide all pages
         document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
+        
+        // Reset sidebar buttons
         document.querySelectorAll('.nav-btn').forEach(btn => {
             btn.classList.remove('bg-accent-primary', 'text-text-onAccent'); 
-            btn.classList.add('text-text-muted'); // Reset to dim
+            btn.classList.add('text-text-muted');
         });
 
+        // Show target page
         const targetSection = document.getElementById(tabId);
         if (targetSection) targetSection.classList.remove('hidden');
 
+        // Highlight sidebar button
         const targetBtn = document.querySelector(`.nav-btn[data-target="${tabId}"]`);
         if (targetBtn) {
             targetBtn.classList.remove('text-text-muted');
-            targetBtn.classList.add('bg-accent-primary', 'text-text-onAccent'); // Active Green
+            targetBtn.classList.add('bg-accent-primary', 'text-text-onAccent');
         }
     }
 
-    // Hash Handling (Deep Linking)
+    // Handle URL Hash (e.g. #settings)
     const handleHash = () => {
         const hash = window.location.hash.replace('#', '') || 'home';
         switchTab(hash);
     };
-    
-    // Listen for hash changes (back button support)
     window.addEventListener('hashchange', handleHash);
-    // Initial Load
-    handleHash();
+    handleHash(); // Run on load
 
-    // Button Clicks
+    // Click Listeners
     document.querySelectorAll('.nav-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             const target = btn.dataset.target;
@@ -38,20 +40,16 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // --- 2. DATA POPULATION ---
+    // --- 2. DATA DISTRIBUTION (Brain) ---
     chrome.storage.local.get(['trackersBlocked', 'detectedTrackers'], (data) => {
         const count = data.trackersBlocked || 0;
         const list = data.detectedTrackers || [];
 
-        // A. Populate HOME (Summary)
-        const homeCount = document.getElementById('home-blocked-count');
+        // A. HOME PAGE: Just the big number
+        const homeCount = document.getElementById('home-total-blocked');
         if(homeCount) homeCount.textContent = count;
-        
-        // Mocking "Total Sites Visited" for the summary text
-        const totalSites = document.getElementById('home-total-sites');
-        if(totalSites) totalSites.textContent = Math.floor(count * 1.5) + 3; 
 
-        // B. Populate OVERVIEW (Detailed List)
+        // B. OVERVIEW PAGE: The detailed list
         const listContainer = document.getElementById('tracker-list');
         if (listContainer) {
             if (list.length === 0) {
@@ -80,7 +78,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // --- 3. UTILITIES ---
+    // --- 3. CONTROLS ---
     const logoutBtn = document.getElementById('logout-btn');
     if (logoutBtn) {
         logoutBtn.addEventListener('click', () => {
