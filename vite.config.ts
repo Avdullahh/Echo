@@ -12,6 +12,7 @@ export default defineConfig({
         // Renamed index.html to popup.html
         popup: resolve(root, 'popup.html'),
         dashboard: resolve(root, 'dashboard.html'),
+        onboarding: resolve(root, 'onboarding.html'),
         background: resolve(root, 'src/background/index.ts'),
       },
       output: {

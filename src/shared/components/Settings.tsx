@@ -1,7 +1,6 @@
-
 import React, { useState } from 'react';
 import { Trash2, Shield, Bell, CheckCircle2, Sliders } from 'lucide-react';
-import { PrivacyLevel } from './Dashboard';
+import { PrivacyLevel } from '../types';
 
 interface SettingsProps {
     currentLevel: PrivacyLevel;

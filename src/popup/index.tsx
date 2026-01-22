@@ -1,37 +1,27 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import '../index.css'; 
-// We use Homescreen because that is your actual "Traffic Light" UI
 import { Homescreen } from '../shared/components/Homescreen';
+import { MOCK_REPORTS_DATA } from '../shared/services/mockData';
 
 const PopupApp = () => {
-  // 1. Initialize with ZERO data (No Mock Data)
-  const [blockedCount, setBlockedCount] = useState(0);
   const [isProtectionOn, setProtectionOn] = useState(true);
 
-  // 2. Load real stats from Chrome Storage (The Brain)
-  useEffect(() => {
-    // Check if we are actually in Chrome (not localhost)
-    if (chrome && chrome.storage && chrome.storage.local) {
-      chrome.storage.local.get(['trackersBlocked'], (data) => {
-        setBlockedCount(data.trackersBlocked || 0);
-      });
-    }
-  }, []);
-
   return (
-    <div className="w-[350px] h-[550px] bg-black">
+    // Updated container to match new Design System tokens
+    <div className="w-[350px] h-[600px] bg-bg-canvas text-text-primary">
       <Homescreen 
-        trackers={[]} // Empty array for now (No Mock Data)
-        blockedCount={blockedCount}
+        trackers={MOCK_REPORTS_DATA}
+        blockedCount={14}
         isProtectionOn={isProtectionOn}
         setProtectionOn={setProtectionOn}
-        onOpenDashboard={() => {
-            // This button opens your full dashboard.html
+        onOpenDashboard={(tab) => {
+            // Updated to handle tab strings safely
+            const section = typeof tab === 'string' ? tab : 'home';
             if (chrome.runtime.openOptionsPage) {
                 chrome.runtime.openOptionsPage();
             } else {
-                window.open('/dashboard.html', '_blank');
+                window.open(`/dashboard.html#${section}`, '_blank');
             }
         }}
       />

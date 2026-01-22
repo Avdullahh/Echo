@@ -1,30 +1,29 @@
-
 export enum RiskLevel {
   SAFE = 'SAFE',
   WARNING = 'WARNING',
   CRITICAL = 'CRITICAL',
+  UNKNOWN = 'UNKNOWN'
 }
 
 export interface TrackerEvent {
-  id: string | number;
+  id: number;
+  host: string;
   domain: string;
   category: string;
+  riskLevel: RiskLevel;
   action: 'Blocked' | 'Allowed';
-  riskLevel?: RiskLevel;
   timestamp: string;
-  company?: string; // Enhanced for Entity Detail
-  dataCollected?: string[]; // Enhanced for Entity Detail
+  company?: string;
+  dataCollected?: string[];
 }
 
 export interface UserProfile {
   persona: string;
   tags: string[];
   trackersBlockedToday: number;
-  confidenceScore: number; // 0 to 1
+  confidenceScore: number;
 }
 
-export interface OnboardingAnswers {
-  cooking: boolean;
-  tech: boolean;
-  shopping: boolean;
-}
+// --- ADDED THESE TO FIX THE BUILD ---
+export type DashboardTab = 'home' | 'overview' | 'reports' | 'settings';
+export type PrivacyLevel = 'strict' | 'balanced' | 'custom';

@@ -3,9 +3,151 @@
   <head>
     <meta charset="UTF-8" />
     <title>Echo Dashboard</title>
+    <link rel="stylesheet" href="/src/index.css">
   </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/dashboard/index.tsx"></script>
+  <body class="bg-bg-canvas text-text-secondary font-sans selection:bg-accent-primary selection:text-neutral-0 antialiased">
+    
+    <div class="flex min-h-screen">
+        
+        <aside class="w-64 fixed h-full border-r border-border-subtle bg-surface-sidebar flex flex-col justify-between p-6 z-50">
+            <div>
+                <div class="flex items-center gap-3 mb-10 px-2">
+                    <div class="w-10 h-10 rounded-sm bg-accent-primary flex items-center justify-center text-neutral-0 font-bold text-xl shadow-glowAccent">E</div>
+                    <span class="text-h2 text-text-primary tracking-tight">Echo</span>
+                </div>
+
+                <nav class="space-y-2">
+                    <button class="nav-btn w-full text-left px-5 py-3 rounded-pill transition-all duration-200 flex items-center gap-3 text-text-muted hover:text-text-primary hover:bg-state-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary" data-target="home">
+                        <span class="text-body font-medium">Home</span>
+                    </button>
+                    <button class="nav-btn w-full text-left px-5 py-3 rounded-pill transition-all duration-200 flex items-center gap-3 text-text-muted hover:text-text-primary hover:bg-state-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary" data-target="reports">
+                        <span class="text-body font-medium">Reports</span>
+                    </button>
+                    <button class="nav-btn w-full text-left px-5 py-3 rounded-pill transition-all duration-200 flex items-center gap-3 text-text-muted hover:text-text-primary hover:bg-state-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary" data-target="settings">
+                        <span class="text-body font-medium">Settings</span>
+                    </button>
+                </nav>
+            </div>
+
+            <button id="logout-btn" class="flex items-center gap-3 px-5 py-3 text-text-muted hover:text-text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary rounded-pill">
+                <span class="text-small font-medium">Disconnect Session</span>
+            </button>
+        </aside>
+
+        <main class="flex-1 ml-64 p-12 max-w-5xl">
+            
+            <div id="home" class="view-section space-y-8 animate-in fade-in duration-300">
+                
+                <div class="flex justify-between items-end border-b border-border-subtle pb-6">
+                    <div>
+                        <h1 class="text-h1 text-text-primary mb-2">Overview</h1>
+                        <p class="text-body text-text-muted">System status and recent interventions.</p>
+                    </div>
+                    <div>
+                         <span class="px-3 py-1 rounded-pill border border-border-default text-label text-text-muted bg-surface-inset">
+                             V.1.1.0 STABLE
+                         </span>
+                    </div>
+                </div>
+
+                <div class="bg-surface-card border border-border-default rounded-xl p-8 relative overflow-hidden group shadow-cardSoft">
+                     <div class="absolute top-0 right-0 w-96 h-96 bg-accent-softBg rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2 opacity-50 pointer-events-none"></div>
+                     
+                     <div class="relative z-10">
+                        <div class="inline-flex items-center gap-2 mb-4">
+                            <div class="w-2 h-2 rounded-full bg-accent-primary shadow-[0_0_8px_#4DFFBC]"></div>
+                            <span class="text-label text-accent-primary uppercase tracking-wider">Protection Active</span>
+                        </div>
+                        
+                        <h2 class="text-h2 text-text-primary mb-3">All Systems Nominal</h2>
+                        <p class="text-body text-text-secondary max-w-lg mb-8 leading-relaxed">
+                            Echo is actively filtering network traffic. The accessible engine is running with optimized contrast ratios.
+                        </p>
+                        
+                        <div class="flex gap-4">
+                            <button class="bg-accent-primary hover:bg-accent-primaryHover text-text-onAccent text-small font-bold px-8 py-3 rounded-pill transition-all shadow-glowAccent transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-accent-primary focus-visible:ring-offset-surface-card">
+                                Run Deep Scan
+                            </button>
+                            <button class="bg-transparent hover:bg-state-hover text-text-primary border border-border-default text-small font-medium px-8 py-3 rounded-pill transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary">
+                                View Activity Logs
+                            </button>
+                        </div>
+                     </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-6">
+                    <div class="bg-surface-cardAlt border border-border-default rounded-xl p-6 hover:border-border-strong transition-colors shadow-cardSoft">
+                        <div class="flex justify-between items-start mb-6">
+                            <div class="p-2.5 bg-surface-inset rounded-sm border border-border-subtle text-icon-muted">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                            </div>
+                            <span class="text-metric text-accent-primary" id="total-blocked">0</span>
+                        </div>
+                        <h3 class="text-body font-bold text-text-primary">Threats Blocked</h3>
+                        <p class="text-small text-text-muted mt-1">Last 24 hours</p>
+                    </div>
+
+                    <div class="bg-surface-cardAlt border border-border-default rounded-xl p-6 hover:border-border-strong transition-colors shadow-cardSoft">
+                        <div class="flex justify-between items-start mb-6">
+                             <div class="p-2.5 bg-surface-inset rounded-sm border border-border-subtle text-icon-muted">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                            </div>
+                            <span class="text-metric text-text-primary">100%</span>
+                        </div>
+                        <h3 class="text-body font-bold text-text-primary">System Health</h3>
+                        <p class="text-small text-text-muted mt-1">Optimal performance</p>
+                    </div>
+                </div>
+
+                <div class="bg-surface-card border border-border-default rounded-xl p-6 shadow-cardSoft">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-h3 text-text-primary">Recent Activity</h3>
+                        <button class="text-small text-accent-primary hover:text-accent-primaryHover font-medium transition-colors">View All</button>
+                    </div>
+                    <div id="tracker-list" class="space-y-2">
+                        <div class="p-6 text-center border border-dashed border-border-strong rounded-lg">
+                            <p class="text-small text-text-muted">Waiting for network traffic...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="reports" class="view-section hidden space-y-8 animate-in fade-in duration-300">
+                <h1 class="text-h1 text-text-primary mb-2">Reports</h1>
+                <p class="text-body text-text-muted mb-8">Detailed analysis of blocked entities.</p>
+                
+                <div class="bg-surface-inset border border-dashed border-border-strong rounded-xl p-16 text-center">
+                    <div class="text-h3 text-text-secondary mb-2">Visualization Module</div>
+                    <div class="text-small text-text-disabled">Chart library pending integration</div>
+                </div>
+            </div>
+
+            <div id="settings" class="view-section hidden space-y-8 animate-in fade-in duration-300">
+                <h1 class="text-h1 text-text-primary mb-2">Settings</h1>
+                
+                <div class="bg-surface-card border border-border-default rounded-xl overflow-hidden shadow-cardSoft">
+                    <div class="p-6 border-b border-border-default flex justify-between items-center hover:bg-surface-cardAlt transition-colors">
+                        <div>
+                            <h3 class="text-body font-bold text-text-primary">Clear System Cache</h3>
+                            <p class="text-small text-text-muted mt-1">Remove all local data stored by Echo.</p>
+                        </div>
+                        <button id="clear-cache-btn" class="px-6 py-2.5 bg-surface-base hover:bg-neutral-300 text-text-primary border border-border-default rounded-pill text-small font-bold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary">
+                            Clear Data
+                        </button>
+                    </div>
+                    <div class="p-6 flex justify-between items-center">
+                         <div>
+                            <h3 class="text-body font-bold text-text-primary">Echo Version</h3>
+                            <p class="text-small text-text-muted mt-1">Current build identifier</p>
+                        </div>
+                        <span class="font-mono text-small text-text-disabled bg-surface-inset px-3 py-1 rounded-md border border-border-subtle">1.1.0</span>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <script type="module" src="/src/dashboard/logic.js"></script>
   </body>
 </html>

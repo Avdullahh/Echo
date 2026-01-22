@@ -1,9 +1,8 @@
-
 import React, { useEffect, useState } from 'react';
 import { UserProfile, RiskLevel } from '../types';
 import { analyzePrivacyFootprint } from '../services/aiService';
 import { Sparkles, Fingerprint, Activity, Info } from 'lucide-react';
-import { PrivacyLevel } from './Dashboard';
+import { PrivacyLevel } from '../types';
 
 interface OverviewProps {
   initialProfile: UserProfile;

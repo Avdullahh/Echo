@@ -1,0 +1,281 @@
+App Design Token
+
+{
+  "meta": {
+    "system": "Echo Design Reference Tokens",
+    "version": "2.0.0",
+    "principles": {
+      "vibe": "Dark premium, calm cyber, neon used as a controlled highlight",
+      "layout": "Simple grid, generous spacing, consistent alignment",
+      "surfaces": "Clear separation between canvas, cards, and popovers",
+      "accentRule": "Neon only for primary actions, active nav, key metrics, and small highlights",
+      "readabilityRule": "No long text in neon, no helper text below muted threshold"
+    }
+  },
+
+  "palette": {
+    "neutral": {
+      "n0": "#000000",
+      "n50": "#050607",
+      "n100": "#080A0B",
+      "n150": "#0B0E10",
+      "n200": "#101417",
+      "n250": "#151B1F",
+      "n300": "#1B242A",
+      "n350": "#223038",
+      "n400": "#2C3C46",
+      "n500": "#3E515D",
+      "n600": "#5A6E7B",
+      "n700": "#7F92A0",
+      "n800": "#A8B6C0",
+      "n900": "#D6DEE3",
+      "n1000": "#FFFFFF"
+    },
+    "mint": {
+      "m300": "#1C7A58",
+      "m400": "#2FBF86",
+      "m500": "#4DFFBC",
+      "m600": "#79FFD0",
+      "m700": "#A5FFE2"
+    },
+    "status": {
+      "danger": "#FF3B30",
+      "warning": "#FFB020",
+      "info": "#0A84FF",
+      "success": "#4DFFBC"
+    }
+  },
+
+  "color": {
+    "bg": {
+      "canvas": "{palette.neutral.n50}",
+      "canvasAlt": "{palette.neutral.n100}",
+      "scrim": "rgba(0,0,0,0.62)",
+      "spotlight": "radial-gradient(60% 50% at 50% 12%, rgba(77,255,188,0.10) 0%, rgba(77,255,188,0.04) 30%, rgba(0,0,0,0) 65%)"
+    },
+
+    "surface": {
+      "sidebar": "{palette.neutral.n100}",
+      "base": "{palette.neutral.n150}",
+      "card": "{palette.neutral.n200}",
+      "cardAlt": "{palette.neutral.n250}",
+      "popover": "{palette.neutral.n250}",
+      "inset": "{palette.neutral.n150}"
+    },
+
+    "border": {
+      "subtle": "rgba(214,222,227,0.12)",
+      "default": "rgba(214,222,227,0.18)",
+      "strong": "rgba(214,222,227,0.26)",
+      "accent": "rgba(77,255,188,0.38)"
+    },
+
+    "text": {
+      "primary": "rgba(255,255,255,0.92)",
+      "secondary": "rgba(255,255,255,0.78)",
+      "muted": "rgba(255,255,255,0.64)",
+      "disabled": "rgba(255,255,255,0.44)",
+      "onAccent": "{palette.neutral.n0}"
+    },
+
+    "icon": {
+      "primary": "rgba(255,255,255,0.86)",
+      "secondary": "rgba(255,255,255,0.72)",
+      "muted": "rgba(255,255,255,0.58)",
+      "accent": "{palette.mint.m500}"
+    },
+
+    "accent": {
+      "primary": "{palette.mint.m500}",
+      "hover": "{palette.mint.m600}",
+      "pressed": "{palette.mint.m500}",
+      "softBg": "rgba(77,255,188,0.14)",
+      "softBgHover": "rgba(77,255,188,0.20)",
+      "glow": "rgba(77,255,188,0.22)"
+    },
+
+    "state": {
+      "hover": "rgba(255,255,255,0.07)",
+      "pressed": "rgba(255,255,255,0.11)",
+      "selected": "rgba(77,255,188,0.16)",
+      "focusRing": "0 0 0 3px rgba(77,255,188,0.30)",
+      "focusRingStrong": "0 0 0 2px rgba(0,0,0,0.70), 0 0 0 5px rgba(77,255,188,0.34)"
+    }
+  },
+
+  "semantic": {
+    "success": {
+      "fg": "{palette.mint.m600}",
+      "bg": "rgba(77,255,188,0.14)",
+      "border": "rgba(77,255,188,0.26)"
+    },
+    "warning": {
+      "fg": "rgba(255,176,32,0.92)",
+      "bg": "rgba(255,176,32,0.14)",
+      "border": "rgba(255,176,32,0.24)"
+    },
+    "danger": {
+      "fg": "rgba(255,59,48,0.92)",
+      "bg": "rgba(255,59,48,0.14)",
+      "border": "rgba(255,59,48,0.24)"
+    },
+    "info": {
+      "fg": "rgba(10,132,255,0.92)",
+      "bg": "rgba(10,132,255,0.14)",
+      "border": "rgba(10,132,255,0.24)"
+    }
+  },
+
+  "typography": {
+    "fontFamily": {
+      "ui": "system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif",
+      "mono": "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace"
+    },
+    "scale": {
+      "display": { "sizePx": 44, "weight": 800, "lineHeight": 1.1, "tracking": -0.02 },
+      "h1": { "sizePx": 36, "weight": 750, "lineHeight": 1.15, "tracking": -0.015 },
+      "h2": { "sizePx": 22, "weight": 700, "lineHeight": 1.25, "tracking": -0.01 },
+      "h3": { "sizePx": 18, "weight": 650, "lineHeight": 1.28, "tracking": -0.005 },
+      "body": { "sizePx": 15, "weight": 500, "lineHeight": 1.55, "tracking": 0 },
+      "small": { "sizePx": 13, "weight": 500, "lineHeight": 1.5, "tracking": 0.01 },
+      "label": { "sizePx": 12, "weight": 650, "lineHeight": 1.2, "tracking": 0.03 }
+    }
+  },
+
+  "spacing": {
+    "xs": 8,
+    "sm": 12,
+    "md": 16,
+    "lg": 20,
+    "xl": 24,
+    "2xl": 32,
+    "3xl": 40,
+    "4xl": 56
+  },
+
+  "radius": {
+    "sm": 12,
+    "md": 16,
+    "lg": 22,
+    "xl": 28,
+    "pill": 999
+  },
+
+  "shadow": {
+    "card": "0 14px 38px rgba(0,0,0,0.42)",
+    "cardSoft": "0 10px 26px rgba(0,0,0,0.32)",
+    "popover": "0 18px 60px rgba(0,0,0,0.55)",
+    "glowAccent": "0 0 0 1px rgba(77,255,188,0.16), 0 0 26px rgba(77,255,188,0.14)"
+  },
+
+  "layout": {
+    "contentMaxWidthPx": 1120,
+    "sidebarWidthPx": 260,
+    "gridGapPx": 24,
+    "sectionGapPx": 32
+  },
+
+  "components": {
+    "card": {
+      "bg": "{color.surface.card}",
+      "border": "1px solid {color.border.default}",
+      "radius": "{radius.xl}",
+      "shadow": "{shadow.cardSoft}",
+      "padding": "{spacing.2xl}"
+    },
+
+    "statTile": {
+      "bg": "{color.surface.cardAlt}",
+      "border": "1px solid {color.border.default}",
+      "radius": "{radius.lg}",
+      "shadow": "{shadow.cardSoft}",
+      "padding": "{spacing.xl}"
+    },
+
+    "button": {
+      "primary": {
+        "bg": "{color.accent.primary}",
+        "text": "{color.text.onAccent}",
+        "radius": "{radius.pill}",
+        "paddingX": "{spacing.xl}",
+        "paddingY": "{spacing.sm}",
+        "shadow": "{shadow.glowAccent}",
+        "hoverBg": "{color.accent.hover}",
+        "pressedBg": "{color.accent.pressed}",
+        "focusRing": "{color.state.focusRingStrong}"
+      },
+      "secondary": {
+        "bg": "rgba(255,255,255,0.06)",
+        "text": "{color.text.primary}",
+        "border": "1px solid {color.border.default}",
+        "radius": "{radius.pill}",
+        "paddingX": "{spacing.xl}",
+        "paddingY": "{spacing.sm}",
+        "hoverBg": "rgba(255,255,255,0.09)",
+        "pressedBg": "rgba(255,255,255,0.12)",
+        "focusRing": "{color.state.focusRingStrong}"
+      },
+      "ghost": {
+        "bg": "transparent",
+        "text": "{color.text.secondary}",
+        "radius": "{radius.pill}",
+        "hoverBg": "{color.state.hover}",
+        "pressedBg": "{color.state.pressed}",
+        "focusRing": "{color.state.focusRingStrong}"
+      }
+    },
+
+    "navItem": {
+      "radius": "{radius.pill}",
+      "text": "{color.text.muted}",
+      "textHover": "{color.text.secondary}",
+      "textActive": "{color.text.onAccent}",
+      "bgHover": "{color.state.hover}",
+      "bgActive": "{color.accent.primary}",
+      "focusRing": "{color.state.focusRingStrong}"
+    },
+
+    "menu": {
+      "bg": "{color.surface.popover}",
+      "border": "1px solid {color.border.strong}",
+      "radius": "{radius.lg}",
+      "shadow": "{shadow.popover}"
+    },
+
+    "placeholder": {
+      "border": "1px dashed rgba(214,222,227,0.26)",
+      "text": "rgba(255,255,255,0.52)",
+      "radius": "{radius.lg}"
+    }
+  },
+
+  "usageRules": {
+    "accent": [
+      "Use accent as fill for primary buttons and active navigation only.",
+      "Use accent as text only for short metrics or badges, not paragraphs.",
+      "Use accent glow only on one primary element per view."
+    ],
+    "text": [
+      "Primary text uses text.primary.",
+      "Descriptions use text.secondary.",
+      "Helper labels use text.muted.",
+      "Do not go below text.disabled for readable content."
+    ],
+    "surfaces": [
+      "Canvas uses bg.canvas.",
+      "Main containers use surface.card.",
+      "Secondary containers use surface.cardAlt.",
+      "Popovers use surface.popover with border.strong."
+    ],
+    "bordersAndShadows": [
+      "Every card gets border.default.",
+      "Only elevated overlays get shadow.popover.",
+      "Glows are reserved for primary action or the main status element."
+    ],
+    "interaction": [
+      "Every interactive element must show focusRingStrong.",
+      "Min clickable size 44px.",
+      "Hover must change background or border visibly, not just icon color."
+    ]
+  }
+}

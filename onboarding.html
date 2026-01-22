@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Echo - Login</title>
+    <link rel="stylesheet" href="/src/index.css">
+  </head>
+  <body class="bg-bg-canvas text-text-primary font-sans h-screen w-full flex items-center justify-center selection:bg-accent-primary selection:text-neutral-0">
+    
+    <div class="fixed inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 pointer-events-none"></div>
+
+    <div class="w-full max-w-sm relative z-10 animate-in fade-in zoom-in duration-500">
+        
+        <div class="text-center mb-10">
+            <div class="inline-flex items-center justify-center w-14 h-14 rounded-xl bg-surface-card border border-border-default mb-6 shadow-cardSoft">
+                <span class="text-accent-primary font-bold text-2xl">E</span>
+            </div>
+            <h1 class="text-h2 font-bold tracking-tight mb-2">Welcome Back</h1>
+            <p class="text-body text-text-muted">Enter your credentials to access the node.</p>
+        </div>
+
+        <div class="space-y-5">
+            <div class="space-y-2">
+                <label class="text-label text-text-secondary ml-1 uppercase tracking-wider">Codename</label>
+                <input type="text" id="username" placeholder="neo_anderson" 
+                    class="w-full bg-surface-inset border border-border-default rounded-xl px-5 py-4 text-body text-text-primary placeholder:text-text-disabled focus:border-accent-primary focus:ring-1 focus:ring-accent-primary focus:outline-none transition-all" />
+            </div>
+            
+            <div class="space-y-2">
+                <label class="text-label text-text-secondary ml-1 uppercase tracking-wider">Passkey</label>
+                <input type="password" id="password" placeholder="••••••••" 
+                    class="w-full bg-surface-inset border border-border-default rounded-xl px-5 py-4 text-body text-text-primary placeholder:text-text-disabled focus:border-accent-primary focus:ring-1 focus:ring-accent-primary focus:outline-none transition-all" />
+            </div>
+
+            <button id="login-btn" class="w-full bg-accent-primary hover:bg-accent-primaryHover text-text-onAccent font-bold text-body py-4 rounded-xl transition-all shadow-glowAccent transform active:scale-[0.98] mt-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-accent-primary focus-visible:ring-offset-bg-canvas">
+                Initialize Session
+            </button>
+        </div>
+
+        <p class="text-center text-text-disabled text-small mt-10">
+            Protected by End-to-End Encryption
+        </p>
+    </div>
+
+    <script type="module" src="/src/onboarding/logic.js"></script>
+  </body>
+</html>
