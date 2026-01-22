@@ -23,13 +23,11 @@ const DashboardApp = () => {
           onOpenEntity={() => {}}
           onOpenPersona={() => {}}
           onTriggerIntervention={() => {}}
-
           onStartTutorial={() => console.log("Start Tutorial")} 
           onTriggerStrictBlock={() => console.log("Trigger Block")}
        />
     </div>
   );
 };
-
 const root = createRoot(document.getElementById('root')!);
 root.render(<React.StrictMode><DashboardApp /></React.StrictMode>);
