@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import '../../index.css';
+import '../index.css';
 import { Dashboard } from '../shared/components/Dashboard';
 import { MOCK_USER_PROFILE, MOCK_REPORTS_DATA } from '../shared/services/mockData';
 
@@ -23,6 +23,9 @@ const DashboardApp = () => {
           onOpenEntity={() => {}}
           onOpenPersona={() => {}}
           onTriggerIntervention={() => {}}
+
+          onStartTutorial={() => console.log("Start Tutorial")} 
+          onTriggerStrictBlock={() => console.log("Trigger Block")}
        />
     </div>
   );

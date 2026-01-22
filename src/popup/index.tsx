@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import '../../index.css'; 
+import '../index.css'; 
 import { Homescreen } from '../shared/components/Homescreen';
 import { MOCK_REPORTS_DATA } from '../shared/services/mockData';
 

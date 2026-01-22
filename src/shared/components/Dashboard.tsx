@@ -19,6 +19,7 @@ interface DashboardProps {
   onClose: () => void;
   activeTab: DashboardTab;
   onTabChange: (tab: DashboardTab) => void;
+  showToast: (msg: string, type?: 'info' | 'alert' | 'success') => void;
   onOpenEntity: (entity: any) => void;
   onOpenPersona: () => void;
   onTriggerIntervention: () => void;

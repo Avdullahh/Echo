@@ -2,7 +2,6 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { resolve } from 'path'
 
-// FIX: Define __dirname for ES Modules
 const root = process.cwd();
 
 export default defineConfig({
@@ -10,8 +9,8 @@ export default defineConfig({
   build: {
     rollupOptions: {
       input: {
-        // Pointing to the files relative to the project root
-        popup: resolve(root, 'index.html'),
+        // Renamed index.html to popup.html
+        popup: resolve(root, 'popup.html'),
         dashboard: resolve(root, 'dashboard.html'),
         background: resolve(root, 'src/background/index.ts'),
       },
