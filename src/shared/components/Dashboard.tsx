@@ -123,7 +123,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         
         {/* --- HOME TAB --- */}
         {activeTab === 'home' && (
-            <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="space-y-8 p-4">
                 {/* Hero */}
                 <div className="bg-zinc-900 rounded-[2.5rem] p-12 relative overflow-hidden">
                     <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-[#4DFFBC]/5 rounded-full blur-[100px] pointer-events-none -translate-y-1/2 translate-x-1/3"></div>
