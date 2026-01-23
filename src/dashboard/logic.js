@@ -57,7 +57,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const timeLabel = document.getElementById('last-updated-time');
             if (timeLabel) timeLabel.textContent = new Date().toLocaleTimeString();
 
-            // D. Render Tables
+            // D. Render Table
             renderTrafficTable(cachedData);
 
             // E. Refresh Reports if active
@@ -177,7 +177,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- 5. AI PERSONA ENGINE (New) ---
+    // --- 5. AI PERSONA ENGINE ---
     const aiBtn = document.getElementById('ai-generate-btn');
     const aiContainer = document.getElementById('ai-result-container');
     const aiTitle = document.getElementById('ai-persona-title');
@@ -185,7 +185,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (aiBtn) {
         aiBtn.addEventListener('click', async () => {
-            // UI Loading State
             aiBtn.disabled = true;
             aiBtn.textContent = "Analyzing...";
             aiContainer.classList.remove('hidden');
@@ -207,19 +206,15 @@ document.addEventListener('DOMContentLoaded', () => {
             const recent = cachedData.slice(0,5).map(t => ({ site: t.domain, status: 'Blocked' }));
 
             try {
-                // Call the Shared AI Service
                 const resultText = await analyzePrivacyFootprint(topCos, categories, recent);
-                
-                // Update UI with Result
                 aiTitle.textContent = "Digital Persona Generated";
                 aiDesc.innerHTML = resultText.replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
                 aiBtn.textContent = "Regenerate";
                 aiBtn.disabled = false;
-
             } catch (err) {
                 console.error(err);
                 aiTitle.textContent = "Analysis Failed";
-                aiDesc.textContent = "Could not connect to AI service. Please check your API key configuration.";
+                aiDesc.textContent = "Could not connect to AI service.";
                 aiBtn.disabled = false;
                 aiBtn.textContent = "Retry";
             }

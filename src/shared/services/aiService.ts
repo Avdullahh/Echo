@@ -1,13 +1,13 @@
+// CHANGE THIS LINE: from "@google/genai" -> "@google/generative-ai"
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // 1. Get Key Safely
-const apiKey = import.meta.env.VITE_GEMINI_API_KEY || "";
+// We cast to 'any' to avoid TypeScript errors without needing extra config files.
+const apiKey = (import.meta as any).env.VITE_GEMINI_API_KEY || "";
 
 let genAI: GoogleGenerativeAI | null = null;
 if (apiKey) {
   genAI = new GoogleGenerativeAI(apiKey);
-} else {
-  console.warn("Echo: AI Service disabled. Missing VITE_GEMINI_API_KEY.");
 }
 
 export const analyzePrivacyFootprint = async (
@@ -43,10 +43,11 @@ export const analyzePrivacyFootprint = async (
   `;
 
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+    // Use the stable model
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
     const result = await model.generateContent(prompt);
     const response = await result.response;
-    return response.text(); 
+    return response.text() || "Unable to generate analysis.";
   } catch (error) {
     console.error("Gemini analysis failed:", error);
     return "Error connecting to Gemini Intelligence. Please check your internet connection.";

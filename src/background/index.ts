@@ -15,25 +15,36 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
   if (alarm.name === UPDATE_ALARM) await refreshBlocklist();
 });
 
-// LISTEN FOR TOGGLE SWITCH
+// LISTENER: Handle "Echo Off" immediately
 chrome.storage.onChanged.addListener((changes, area) => {
-    if (area === 'local' && changes.isProtectionOn) {
-        const isOn = changes.isProtectionOn.newValue;
-        if (isOn) {
-            console.log("Echo: Protection Resumed.");
-            refreshBlocklist(); // Re-apply rules
-        } else {
-            console.log("Echo: Protection Paused.");
-            // Remove all dynamic rules
-            chrome.declarativeNetRequest.getDynamicRules((rules) => {
-                const ids = rules.map(r => r.id);
-                chrome.declarativeNetRequest.updateDynamicRules({
-                    removeRuleIds: ids,
-                    addRules: []
-                });
-            });
-        }
+  if (area === 'local' && changes.isProtectionOn) {
+    const isProtectionOn = changes.isProtectionOn.newValue;
+    
+    if (isProtectionOn) {
+      console.log("Echo: Protection Resumed.");
+      refreshBlocklist(); // Re-apply rules
+      chrome.action.setBadgeText({ text: "ON" });
+      chrome.action.setBadgeBackgroundColor({ color: "#4DFFBC" }); // Accent Green
+    } else {
+      console.log("Echo: Protection Paused.");
+      // Remove all dynamic rules to actually stop blocking
+      chrome.declarativeNetRequest.getDynamicRules((rules) => {
+        const ids = rules.map(r => r.id);
+        chrome.declarativeNetRequest.updateDynamicRules({
+          removeRuleIds: ids,
+          addRules: []
+        });
+      });
+      chrome.action.setBadgeText({ text: "OFF" });
+      chrome.action.setBadgeBackgroundColor({ color: "#8B949E" }); // Grey
     }
+  }
+});
+
+// Update Initialization to respect saved state
+chrome.runtime.onInstalled.addListener(async () => {
+  await chrome.storage.local.set({ isProtectionOn: true }); // Default to true
+  await refreshBlocklist();
 });
 
 async function refreshBlocklist() {
@@ -116,13 +127,17 @@ chrome.declarativeNetRequest.onRuleMatchedDebug.addListener(async (info) => {
 async function saveEvent(newEvent: TrackerEvent) {
   const result = await chrome.storage.local.get(['detectedTrackers', 'trackersBlocked']);
   let events = result.detectedTrackers || [];
-  let count = result.trackersBlocked || 0;
+  let count = (result.trackersBlocked || 0) + 1; // Increment
 
   events.unshift(newEvent);
   if (events.length > 200) events = events.slice(0, 200);
 
+  // CHANGE: Update the visual badge
+  chrome.action.setBadgeText({ text: count.toString() });
+  chrome.action.setBadgeBackgroundColor({ color: "#4DFFBC" }); // Your Brand Green
+
   await chrome.storage.local.set({
     detectedTrackers: events,
-    trackersBlocked: count + 1
+    trackersBlocked: count
   });
 }

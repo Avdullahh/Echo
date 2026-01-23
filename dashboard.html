@@ -56,7 +56,7 @@
         <div id="home" class="view-section max-w-6xl mx-auto space-y-6">
             <header class="mb-4">
                 <h1 class="text-3xl font-bold text-text-primary mb-2">Home</h1>
-                <p class="text-text-muted">Real-time privacy monitoring.</p>
+                <p class="text-text-muted">Real-time privacy monitoring active.</p>
             </header>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
@@ -93,17 +93,13 @@
                             <span class="px-2 py-0.5 rounded bg-accent-secondary/10 text-accent-secondary text-[10px] font-bold border border-accent-secondary/20">AI BETA</span>
                         </div>
                         <p class="text-text-muted text-sm mb-6 leading-relaxed">
-                            Echo's AI analyzes your blocked tracking data to infer what "Persona" advertisers are assigning to you. See who they think you are.
+                            Echo's AI analyzes your blocked tracking data to infer what "Persona" advertisers are assigning to you.
                         </p>
                         
                         <button id="ai-generate-btn" class="px-5 py-2.5 bg-accent-secondary text-white rounded-lg text-sm font-bold shadow-lg shadow-accent-secondary/20 hover:bg-accent-secondary/90 transition-all flex items-center gap-2">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
                             Generate Persona
                         </button>
-                        
-                        <div class="mt-4 text-[10px] text-text-muted opacity-60">
-                            * Disclaimer: AI-generated insights are inferences based on tracker patterns and may be inaccurate.
-                        </div>
                     </div>
 
                     <div id="ai-result-container" class="hidden w-full md:w-1/2 bg-surface-inset/50 rounded-xl p-6 border border-border-subtle">
@@ -125,7 +121,7 @@
         <div id="overview" class="view-section hidden max-w-5xl mx-auto">
             <header class="mb-8 flex justify-between items-end">
                 <div>
-                    <h2 class="text-2xl font-bold text-text-primary">Live Activity Overview</h2>
+                    <h2 class="text-2xl font-bold text-text-primary">Live Activity</h2>
                     <p class="text-text-muted text-sm">Incoming requests blocked by filter.</p>
                 </div>
                 <div class="px-3 py-1 rounded-full bg-surface-card border border-border-subtle text-xs text-text-muted">
@@ -156,18 +152,14 @@
                 <h2 class="text-2xl font-bold text-text-primary">Intelligence Report</h2>
                 <p class="text-text-muted text-sm">Deep dive into data collection sources.</p>
             </header>
-
             <div class="grid grid-cols-2 gap-6">
                 <div class="glass-panel p-6 rounded-2xl">
                     <h3 class="text-sm font-bold text-text-primary mb-6">Top Offenders</h3>
-                    <div id="top-companies-chart" class="space-y-4">
-                        </div>
+                    <div id="top-companies-chart" class="space-y-4"></div>
                 </div>
-
                 <div class="glass-panel p-6 rounded-2xl">
                     <h3 class="text-sm font-bold text-text-primary mb-6">Category Distribution</h3>
-                    <div id="categories-list" class="space-y-3">
-                        </div>
+                    <div id="categories-list" class="space-y-3"></div>
                 </div>
             </div>
         </div>
@@ -175,28 +167,22 @@
         <div id="settings" class="view-section hidden max-w-3xl mx-auto space-y-6">
             <header class="mb-8">
                 <h2 class="text-2xl font-bold text-text-primary">Settings</h2>
-                <p class="text-text-muted text-sm">Preferences & Data Management</p>
+                <p class="text-text-muted text-sm">Manage your data.</p>
             </header>
-
             <div class="glass-panel rounded-2xl overflow-hidden divide-y divide-border-subtle">
                 <div class="p-6 flex items-center justify-between hover:bg-surface-cardHover transition-colors">
                     <div>
                         <div class="font-medium text-text-primary">Export Logs</div>
-                        <div class="text-xs text-text-muted mt-1">Download a JSON copy of your blocking history.</div>
+                        <div class="text-xs text-text-muted mt-1">Download your blocking history.</div>
                     </div>
-                    <button id="export-data-btn" class="px-4 py-2 bg-surface-inset border border-border-subtle rounded-lg text-sm text-text-primary hover:border-accent-primary transition-colors">
-                        Download
-                    </button>
+                    <button id="export-data-btn" class="px-4 py-2 bg-surface-inset border border-border-subtle rounded-lg text-sm text-text-primary hover:border-accent-primary transition-colors">Download</button>
                 </div>
-
                 <div class="p-6 flex items-center justify-between hover:bg-surface-cardHover transition-colors">
                     <div>
                         <div class="font-medium text-accent-critical">Danger Zone</div>
-                        <div class="text-xs text-text-muted mt-1">Permanently delete all local data.</div>
+                        <div class="text-xs text-text-muted mt-1">Permanently delete all data.</div>
                     </div>
-                    <button id="clear-cache-btn" class="px-4 py-2 bg-accent-critical/10 border border-accent-critical/20 rounded-lg text-sm text-accent-critical hover:bg-accent-critical hover:text-white transition-all">
-                        Reset Data
-                    </button>
+                    <button id="clear-cache-btn" class="px-4 py-2 bg-accent-critical/10 border border-accent-critical/20 rounded-lg text-sm text-accent-critical hover:bg-accent-critical hover:text-white transition-all">Reset Data</button>
                 </div>
             </div>
         </div>
