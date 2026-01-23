@@ -59,21 +59,25 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>`;
             } else {
                 listContainer.innerHTML = list.map(t => `
-                    <div class="flex items-center justify-between p-4 bg-surface-cardAlt rounded-lg border border-border-subtle mb-2 hover:border-border-strong transition-colors">
-                        <div class="flex items-center gap-4">
-                            <div class="w-10 h-10 rounded-full bg-surface-inset flex items-center justify-center text-accent-primary border border-border-subtle font-bold text-xs">
-                                ${t.host.charAt(0).toUpperCase()}
+                <div class="flex items-center justify-between p-4 bg-surface-cardAlt rounded-lg border border-border-subtle mb-2 hover:border-border-strong transition-colors">
+                    <div class="flex items-center gap-4">
+                        <div class="w-10 h-10 rounded-full bg-surface-inset flex items-center justify-center text-accent-primary border border-border-subtle font-bold text-xs">
+                            ${t.domain.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                            <div class="text-body font-bold text-text-primary">
+                                ${t.company && t.company !== 'Unknown' ? t.company : t.domain}
                             </div>
-                            <div>
-                                <div class="text-body font-bold text-text-primary">${t.host}</div>
-                                <div class="text-small text-text-muted">${t.category} • ${new Date(t.timestamp).toLocaleTimeString()}</div>
+                            <div class="text-small text-text-muted">
+                                ${t.domain} • <span class="capitalize">${t.category}</span>
                             </div>
                         </div>
-                        <span class="px-3 py-1 bg-surface-inset rounded-full text-[10px] font-bold text-accent-primary border border-border-subtle">
-                            BLOCKED
-                        </span>
                     </div>
-                `).join('');
+                    <span class="px-3 py-1 bg-surface-inset rounded-full text-[10px] font-bold text-accent-primary border border-border-subtle">
+                        ${t.action.toUpperCase()}
+                    </span>
+                </div>`
+                ).join('');
             }
         }
     });

@@ -1,29 +1,34 @@
 {
-    "manifest_version": 3,
-    "name": "Echo - Privacy Dashboard",
-    "version": "1.0.0",
-    "description": "User Online Data Reflection and Analysis Tool",
-    "permissions": ["storage"],
-    "host_permissions": ["<all_urls>"],
-    "background": {
-      "service_worker": "assets/background.js",
-      "type": "module"
-    },
-    "action": {
-      "default_popup": "popup.html",
-      "default_icon": {
-          "16": "icons/icon16.png",
-          "48": "icons/icon48.png",
-          "128": "icons/icon128.png"
-      }
-    },
-    "options_ui": {
-      "page": "dashboard.html",
-      "open_in_tab": true
-    },
-    "icons": {
-      "16": "icons/icon16.png",
-      "48": "icons/icon48.png",
-      "128": "icons/icon128.png"
+  "manifest_version": 3,
+  "name": "Echo - Privacy Dashboard",
+  "version": "1.0.0",
+  "description": "User Online Data Reflection and Analysis Tool",
+  "permissions": [
+    "storage",
+    "alarms",
+    "declarativeNetRequest",
+    "declarativeNetRequestFeedback"
+  ],
+  "host_permissions": ["<all_urls>"],
+  "background": {
+    "service_worker": "assets/background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+        "16": "icons/icon16.png",
+        "48": "icons/icon48.png",
+        "128": "icons/icon128.png"
     }
+  },
+  "options_ui": {
+    "page": "dashboard.html",
+    "open_in_tab": true
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
   }
+}
