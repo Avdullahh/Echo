@@ -5,9 +5,8 @@ const UPDATE_ALARM = 'update-blocklist';
 
 console.log("Echo: Background Engine Starting...");
 
-// --- 1. INITIALIZATION ---
 chrome.runtime.onInstalled.addListener(async () => {
-  console.log("Echo: Extension Installed. Fetching Real Blocklist...");
+  await chrome.storage.local.set({ isProtectionOn: true }); // Default On
   await refreshBlocklist();
   chrome.alarms.create(UPDATE_ALARM, { periodInMinutes: 60 }); 
 });
@@ -16,8 +15,35 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
   if (alarm.name === UPDATE_ALARM) await refreshBlocklist();
 });
 
-// --- 2. BLOCKLIST SYNC (with Metadata) ---
+// LISTEN FOR TOGGLE SWITCH
+chrome.storage.onChanged.addListener((changes, area) => {
+    if (area === 'local' && changes.isProtectionOn) {
+        const isOn = changes.isProtectionOn.newValue;
+        if (isOn) {
+            console.log("Echo: Protection Resumed.");
+            refreshBlocklist(); // Re-apply rules
+        } else {
+            console.log("Echo: Protection Paused.");
+            // Remove all dynamic rules
+            chrome.declarativeNetRequest.getDynamicRules((rules) => {
+                const ids = rules.map(r => r.id);
+                chrome.declarativeNetRequest.updateDynamicRules({
+                    removeRuleIds: ids,
+                    addRules: []
+                });
+            });
+        }
+    }
+});
+
 async function refreshBlocklist() {
+  // 1. Check if protection is actually ON
+  const store = await chrome.storage.local.get(['isProtectionOn']);
+  if (store.isProtectionOn === false) {
+      console.log("Echo: Skipping update because protection is OFF.");
+      return;
+  }
+
   try {
     const response = await fetch(API_ENDPOINT);
     if (!response.ok) throw new Error(`API Error: ${response.status}`);
@@ -25,11 +51,10 @@ async function refreshBlocklist() {
     const dbRules: BlocklistRule[] = await response.json();
     console.log(`Echo: Received ${dbRules.length} rules.`);
 
-    // CREATE LOOKUP MAP (Domain -> Owner)
     const metadata: Record<string, { owner: string, category: string }> = {};
     
     const dynamicRules = dbRules.map((rule) => {
-      metadata[rule.domain] = { owner: rule.owner, category: rule.category }; // Store metadata
+      metadata[rule.domain] = { owner: rule.owner, category: rule.category };
       
       return {
         id: rule.id,
@@ -53,28 +78,24 @@ async function refreshBlocklist() {
     });
 
     await chrome.storage.local.set({ trackerMetadata: metadata });
-    console.log("Echo: Metadata and Rules Updated.");
+    console.log("Echo: Rules Active.");
     
   } catch (error) {
     console.error("Echo: Sync Failed", error);
   }
 }
 
-// --- 3. INTELLIGENT LOGGING (With Spam Filter) ---
-let recentLogs = new Set<string>(); // Cache to track recent blocks
+// INTELLIGENT LOGGING
+let recentLogs = new Set<string>();
 
 chrome.declarativeNetRequest.onRuleMatchedDebug.addListener(async (info) => {
   const match = info.request;
   const domain = new URL(match.url).hostname;
   
-  // SPAM FILTER: If we blocked this domain in the last 2 seconds, ignore it.
   if (recentLogs.has(domain)) return;
-  
-  // Add to cache and remove after 2 seconds
   recentLogs.add(domain);
   setTimeout(() => recentLogs.delete(domain), 2000);
 
-  // FETCH METADATA
   const store = await chrome.storage.local.get(['trackerMetadata']);
   const meta = store.trackerMetadata ? store.trackerMetadata[domain] : null;
 
@@ -83,7 +104,7 @@ chrome.declarativeNetRequest.onRuleMatchedDebug.addListener(async (info) => {
     host: domain,
     domain: domain,
     category: meta ? meta.category : 'Unknown',
-    company: meta ? meta.owner : 'Unknown', // <--- REAL OWNER (e.g., "Google")
+    company: meta ? meta.owner : 'Unknown',
     riskLevel: RiskLevel.WARNING,
     action: 'Blocked',
     timestamp: new Date().toISOString()
@@ -98,7 +119,7 @@ async function saveEvent(newEvent: TrackerEvent) {
   let count = result.trackersBlocked || 0;
 
   events.unshift(newEvent);
-  if (events.length > 200) events = events.slice(0, 200); // Keep list short for performance
+  if (events.length > 200) events = events.slice(0, 200);
 
   await chrome.storage.local.set({
     detectedTrackers: events,

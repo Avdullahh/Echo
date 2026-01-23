@@ -5,7 +5,7 @@ import { Power, LayoutDashboard, Settings, Home, FileText } from 'lucide-react';
 interface ExtensionPopupProps {
   trackers?: TrackerEvent[];
   blockedCount: number;
-  isProtectionOn: boolean;
+  isProtectionOn: boolean | null; // Updated to match index.tsx
   setProtectionOn: (val: boolean) => void;
   onOpenDashboard: (tab: DashboardTab) => void;
 }
@@ -24,7 +24,7 @@ export const ExtensionPopup: React.FC<ExtensionPopupProps> = ({
         title={label}
     >
         <div className="w-5 h-5 flex items-center justify-center text-text-muted group-hover:text-accent-primary shrink-0">
-            <Icon className="w-4 h-4" /> {/* Slightly larger icons for new size */}
+            <Icon className="w-4 h-4" /> 
         </div>
         <span className="text-[10px] font-medium text-text-primary opacity-0 group-hover:opacity-100 whitespace-nowrap transition-opacity duration-300">
             {label}
@@ -52,7 +52,8 @@ export const ExtensionPopup: React.FC<ExtensionPopupProps> = ({
         <div className="flex items-center justify-between bg-surface-card/50 backdrop-blur-sm border border-border-subtle rounded-full p-1 shadow-cardSoft mx-1">
             <NavItem icon={Home} label="Home" target="home" />
             <NavItem icon={LayoutDashboard} label="Overview" target="overview" />
-            <NavItem icon={FileText} label="Reports" target="reports" />
+            {/* FIX: Changed target to 'report' (singular) to match Dashboard ID */}
+            <NavItem icon={FileText} label="Report" target="report" />
             <NavItem icon={Settings} label="Settings" target="settings" />
         </div>
       </div>

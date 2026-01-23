@@ -2,4 +2,36 @@
 @tailwind components;
 @tailwind utilities;
 
-html, body, #root { height: 100%; width: 100%; background-color: #000000; color: #ffffff; }
+/* Base Reset */
+body {
+  @apply bg-bg-canvas text-text-primary antialiased;
+}
+
+/* Custom Scrollbar for Dashboard */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  @apply bg-bg-base;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-border-subtle rounded-full border-2 border-bg-base;
+}
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-border-strong;
+}
+
+/* Glassmorphism Utility */
+.glass-panel {
+  @apply bg-surface-glass backdrop-blur-xl border border-border-subtle shadow-glass;
+}
+
+/* Neon Glow Animation */
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 15px rgba(77, 255, 188, 0.1); }
+  50% { box-shadow: 0 0 25px rgba(77, 255, 188, 0.3); }
+}
+
+.animate-glow {
+  animation: pulse-glow 3s infinite;
+}

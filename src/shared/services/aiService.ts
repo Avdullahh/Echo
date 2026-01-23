@@ -1,20 +1,25 @@
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
-// Initialize Gemini with the API key from environment variables
-// Note: In a real production extension, this would likely be handled via a backend proxy 
-// or user-provided key to keep the key secure.
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// 1. Get Key Safely
+const apiKey = import.meta.env.VITE_GEMINI_API_KEY || "";
 
-/**
- * Uses Gemini to analyze the user's tracking data and generate a privacy report.
- */
+let genAI: GoogleGenerativeAI | null = null;
+if (apiKey) {
+  genAI = new GoogleGenerativeAI(apiKey);
+} else {
+  console.warn("Echo: AI Service disabled. Missing VITE_GEMINI_API_KEY.");
+}
+
 export const analyzePrivacyFootprint = async (
   topCompanies: { name: string; count: number }[],
   categories: { label: string; percent: number }[],
   recentActivity: any[]
 ): Promise<string> => {
   
-  // Construct a prompt that contextualizes the raw data
+  if (!genAI) {
+    return "⚠️ AI Configuration Missing.\n\nPlease check your .env.local file has VITE_GEMINI_API_KEY defined.";
+  }
+
   const prompt = `
     You are Echo, an advanced digital privacy assistant. Analyze the following user data detected from their browser extension:
 
@@ -38,13 +43,12 @@ export const analyzePrivacyFootprint = async (
   `;
 
   try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
-      contents: prompt,
-    });
-    return response.text || "Unable to generate analysis at this time.";
+    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    return response.text(); 
   } catch (error) {
     console.error("Gemini analysis failed:", error);
-    return "Error connecting to Gemini Intelligence. Please ensure your API key is configured correctly.";
+    return "Error connecting to Gemini Intelligence. Please check your internet connection.";
   }
 };

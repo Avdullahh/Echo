@@ -1,10 +1,10 @@
 List of problems to fix:
 
--When turned off, clicking back to the extension turns it on automatically. 
-
 -Make sure all the logic regarding off are true and when the app is turned off, all backgrounded services 
 turn off and remain turned off until the user turns it back on.
 
 -Make sure all the logic regarding on are true and when the app is turned on, all backgrounded
 services turn on and remain turned on, unless specified elsewhere in the user's settings, 
 until the user turns it back off.
+
+-AI for Digital Profile incorporated, but shows errors when used.

@@ -5,28 +5,46 @@ import { ExtensionPopup } from './components/ExtensionPopup';
 import { TrackerEvent } from '../shared/types';
 
 const PopupApp = () => {
-  const [isProtectionOn, setProtectionOn] = useState(true);
+  // FIX: Start as 'null' to prevent flashing "On" if it's actually "Off"
+  const [isProtectionOn, setProtectionOnState] = useState<boolean | null>(null);
   const [realTrackers, setRealTrackers] = useState<TrackerEvent[]>([]);
   const [blockedCount, setBlockedCount] = useState(0);
 
-  // FETCH REAL DATA ON MOUNT
+  // 1. LOAD STATE FROM STORAGE ON STARTUP
   useEffect(() => {
     if (typeof chrome !== 'undefined' && chrome.storage) {
-      chrome.storage.local.get(['detectedTrackers', 'trackersBlocked'], (result) => {
+      chrome.storage.local.get(['detectedTrackers', 'trackersBlocked', 'isProtectionOn'], (result) => {
         setRealTrackers(result.detectedTrackers || []);
         setBlockedCount(result.trackersBlocked || 0);
+        // FIX: If undefined, default to true, otherwise use saved value
+        setProtectionOnState(result.isProtectionOn !== undefined ? result.isProtectionOn : true);
       });
+    } else {
+        // Fallback for non-extension environments
+        setProtectionOnState(true);
     }
   }, []);
 
+  // 2. WRAPPER TO SAVE STATE WHEN CHANGED
+  const handleToggleProtection = (newValue: boolean) => {
+      setProtectionOnState(newValue);
+      if (typeof chrome !== 'undefined' && chrome.storage) {
+          chrome.storage.local.set({ isProtectionOn: newValue });
+      }
+  };
+
+  // FIX: Show nothing until we know the real state to prevent flash
+  if (isProtectionOn === null) {
+      return <div className="w-[286px] h-[462px] bg-bg-canvas border border-border-subtle shadow-2xl"></div>;
+  }
+
   return (
-    // Style: 286px x 462px (10% larger), Sharp Edges, Filled Background
     <div className="w-[286px] h-[462px] bg-bg-canvas text-text-primary overflow-hidden border border-border-subtle shadow-2xl">
       <ExtensionPopup 
-        trackers={realTrackers} // <--- PASSING REAL DATA
-        blockedCount={blockedCount} // <--- PASSING REAL COUNT
+        trackers={realTrackers}
+        blockedCount={blockedCount}
         isProtectionOn={isProtectionOn}
-        setProtectionOn={setProtectionOn}
+        setProtectionOn={handleToggleProtection}
         onOpenDashboard={(tab) => {
             const targetUrl = `dashboard.html#${tab}`;
             if (typeof chrome !== 'undefined' && chrome.tabs) {
