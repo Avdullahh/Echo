@@ -1,8 +1,6 @@
-// CHANGE THIS LINE: from "@google/genai" -> "@google/generative-ai"
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // 1. Get Key Safely
-// We cast to 'any' to avoid TypeScript errors without needing extra config files.
 const apiKey = (import.meta as any).env.VITE_GEMINI_API_KEY || "";
 
 let genAI: GoogleGenerativeAI | null = null;
@@ -17,39 +15,33 @@ export const analyzePrivacyFootprint = async (
 ): Promise<string> => {
   
   if (!genAI) {
-    return "⚠️ AI Configuration Missing.\n\nPlease check your .env.local file has VITE_GEMINI_API_KEY defined.";
+    return "⚠️ Configuration Error: VITE_GEMINI_API_KEY is missing in .env.local";
   }
 
   const prompt = `
-    You are Echo, an advanced digital privacy assistant. Analyze the following user data detected from their browser extension:
+    Analyze this tracking data to build a "Digital Shadow" of the user.
 
-    1. **Top Tracking Entities**: ${topCompanies.map(c => `${c.name} (${c.count} attempts)`).join(', ')}.
-    2. **Tracker Categories**: ${categories.map(c => `${c.label} (${c.percent}%)`).join(', ')}.
-    3. **Recent Activity**: ${recentActivity.slice(0, 5).map(a => `${a.site} (Risk: ${a.status})`).join(', ')}.
+    Data:
+    - Top Trackers: ${topCompanies.map(c => `${c.name} (${c.count})`).join(', ')}
+    - Interest Categories: ${categories.map(c => `${c.label}`).join(', ')}
 
-    Based on this, provide a concise, high-impact privacy insight report (approx 80-100 words).
-    
-    Structure your response with these headers (using Markdown):
-    ### 🕵️ Detected Persona
-    (Describe who advertisers think the user is based on the data)
+    Task:
+    1. Assign a creative "Digital Persona" title (e.g., "The Tech-Savvy Shopper").
+    2. Explain *why* advertisers are targeting them.
+    3. Estimate their "Data Value" (Low/Med/High).
 
-    ### ⚠️ Primary Risk
-    (Identify the biggest privacy concern)
-
-    ### 🛡️ Recommendation
-    (One specific action to take)
-
-    Tone: Professional, insightful, and protective.
+    Format: Use Markdown. Be concise (under 100 words).
   `;
 
   try {
-    // Use the stable model
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    // FIX: Switch to 'gemini-pro' (The standard, most reliable model)
+    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
     const result = await model.generateContent(prompt);
     const response = await result.response;
-    return response.text() || "Unable to generate analysis.";
-  } catch (error) {
-    console.error("Gemini analysis failed:", error);
-    return "Error connecting to Gemini Intelligence. Please check your internet connection.";
+    return response.text(); 
+  } catch (error: any) {
+    console.error("Gemini Error Details:", error);
+    
+    return `**AI Analysis Failed**\n\nError: ${error.message || "Unknown Network Error"}.\n\nPlease check the console (F12) for details.`;
   }
 };

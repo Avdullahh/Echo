@@ -97,12 +97,25 @@ document.addEventListener('DOMContentLoaded', () => {
             if(emptyState) emptyState.classList.remove('hidden');
             return;
         }
-
         if(emptyState) emptyState.classList.add('hidden');
 
-        const recentList = list.slice(0, 50);
+        // CHANGE: Group by Domain/Company
+        const grouped = list.reduce((acc, t) => {
+            const key = t.company && t.company !== 'Unknown' ? t.company : t.domain;
+            if (!acc[key]) {
+                acc[key] = { ...t, count: 0, lastSeen: t.timestamp };
+            }
+            acc[key].count++;
+            // Keep most recent timestamp
+            if (new Date(t.timestamp) > new Date(acc[key].lastSeen)) {
+                acc[key].lastSeen = t.timestamp;
+            }
+            return acc;
+        }, {});
 
-        tableBody.innerHTML = recentList.map(t => {
+        const sorted = Object.values(grouped).sort((a, b) => new Date(b.lastSeen) - new Date(a.lastSeen));
+
+        tableBody.innerHTML = sorted.map(t => {
             const displayOwner = t.company && t.company !== 'Unknown' ? t.company : t.domain;
             
             return `
@@ -114,7 +127,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                         <div>
                             <div class="text-sm font-medium text-text-primary">${displayOwner}</div>
-                            <div class="text-xs text-text-muted">${t.domain}</div>
+                            <div class="text-xs text-text-muted">${t.count} attempts blocked</div>
                         </div>
                     </div>
                 </td>
@@ -124,7 +137,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     </span>
                 </td>
                 <td class="px-6 py-4 text-right text-xs text-text-muted tabular-nums">
-                    ${new Date(t.timestamp).toLocaleTimeString()}
+                    ${new Date(t.lastSeen).toLocaleTimeString()}
                 </td>
             </tr>
         `}).join('');

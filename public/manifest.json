@@ -10,6 +10,9 @@
     "declarativeNetRequestFeedback"
   ],
   "host_permissions": ["<all_urls>"],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'; connect-src 'self' https://generativelanguage.googleapis.com"
+  },
   "background": {
     "service_worker": "assets/background.js",
     "type": "module"

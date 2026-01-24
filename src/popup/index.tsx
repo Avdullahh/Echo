@@ -5,38 +5,34 @@ import { ExtensionPopup } from './components/ExtensionPopup';
 import { TrackerEvent } from '../shared/types';
 
 const PopupApp = () => {
-  // FIX: Start as 'null' to prevent flashing "On" if it's actually "Off"
-  const [isProtectionOn, setProtectionOnState] = useState<boolean | null>(null);
+  // CHANGE 1: Start with null to represent "Loading"
+  const [isProtectionOn, setProtectionOn] = useState<boolean | null>(null);
   const [realTrackers, setRealTrackers] = useState<TrackerEvent[]>([]);
   const [blockedCount, setBlockedCount] = useState(0);
 
-  // 1. LOAD STATE FROM STORAGE ON STARTUP
   useEffect(() => {
     if (typeof chrome !== 'undefined' && chrome.storage) {
       chrome.storage.local.get(['detectedTrackers', 'trackersBlocked', 'isProtectionOn'], (result) => {
         setRealTrackers(result.detectedTrackers || []);
         setBlockedCount(result.trackersBlocked || 0);
-        // FIX: If undefined, default to true, otherwise use saved value
-        setProtectionOnState(result.isProtectionOn !== undefined ? result.isProtectionOn : true);
+        // CHANGE 2: If undefined, default to true, otherwise use saved value
+        setProtectionOn(result.isProtectionOn !== undefined ? result.isProtectionOn : true);
       });
     } else {
-        // Fallback for non-extension environments
-        setProtectionOnState(true);
+        setProtectionOn(true); // Fallback for dev mode
     }
   }, []);
 
-  // 2. WRAPPER TO SAVE STATE WHEN CHANGED
-  const handleToggleProtection = (newValue: boolean) => {
-      setProtectionOnState(newValue);
+  // CHANGE 3: Wrapper to save state immediately when toggled
+  const handleToggle = (val: boolean) => {
+      setProtectionOn(val);
       if (typeof chrome !== 'undefined' && chrome.storage) {
-          chrome.storage.local.set({ isProtectionOn: newValue });
+          chrome.storage.local.set({ isProtectionOn: val });
       }
   };
 
-  // FIX: Show nothing until we know the real state to prevent flash
-  if (isProtectionOn === null) {
-      return <div className="w-[286px] h-[462px] bg-bg-canvas border border-border-subtle shadow-2xl"></div>;
-  }
+  // CHANGE 4: Prevent rendering until state is known
+  if (isProtectionOn === null) return null; 
 
   return (
     <div className="w-[286px] h-[462px] bg-bg-canvas text-text-primary overflow-hidden border border-border-subtle shadow-2xl">
@@ -44,7 +40,7 @@ const PopupApp = () => {
         trackers={realTrackers}
         blockedCount={blockedCount}
         isProtectionOn={isProtectionOn}
-        setProtectionOn={handleToggleProtection}
+        setProtectionOn={handleToggle}
         onOpenDashboard={(tab) => {
             const targetUrl = `dashboard.html#${tab}`;
             if (typeof chrome !== 'undefined' && chrome.tabs) {
