@@ -14,6 +14,7 @@ export default defineConfig({
         dashboard: resolve(root, 'dashboard.html'),
         onboarding: resolve(root, 'onboarding.html'),
         background: resolve(root, 'src/background/index.ts'),
+        cookiebanner: resolve(root, 'src/content/cookiebanner.ts'),
       },
       output: {
         entryFileNames: 'assets/[name].js',

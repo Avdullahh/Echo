@@ -235,6 +235,40 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- 6. SETTINGS ACTIONS ---
+    // Ad Blocking Toggle
+    const adBlockingToggle = document.getElementById('ad-blocking-toggle');
+    if (adBlockingToggle) {
+        // Load current state
+        chrome.storage.local.get(['isAdBlockingOn'], (data) => {
+            adBlockingToggle.checked = data.isAdBlockingOn !== false; // Default true
+        });
+
+        // Handle toggle change
+        adBlockingToggle.addEventListener('change', (e) => {
+            const isEnabled = e.target.checked;
+            chrome.storage.local.set({ isAdBlockingOn: isEnabled }, () => {
+                console.log(`Ad blocking ${isEnabled ? 'enabled' : 'disabled'}`);
+            });
+        });
+    }
+
+    // Cookie Banner Blocking Toggle
+    const cookieBannerToggle = document.getElementById('cookie-banner-toggle');
+    if (cookieBannerToggle) {
+        // Load current state
+        chrome.storage.local.get(['isCookieBannerBlockingOn'], (data) => {
+            cookieBannerToggle.checked = data.isCookieBannerBlockingOn !== false; // Default true
+        });
+
+        // Handle toggle change
+        cookieBannerToggle.addEventListener('change', (e) => {
+            const isEnabled = e.target.checked;
+            chrome.storage.local.set({ isCookieBannerBlockingOn: isEnabled }, () => {
+                console.log(`Cookie banner blocking ${isEnabled ? 'enabled' : 'disabled'}`);
+            });
+        });
+    }
+
     const exportBtn = document.getElementById('export-data-btn');
     if (exportBtn) {
         exportBtn.addEventListener('click', () => {

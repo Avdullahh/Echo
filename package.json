@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "generate:adblock": "node scripts/generate-adblock-rules.js",
+    "prebuild": "npm run generate:adblock",
     "build": "tsc && vite build",
     "preview": "vite preview"
   },

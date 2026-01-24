@@ -6,9 +6,20 @@ const UPDATE_ALARM = 'update-blocklist';
 console.log("Echo: Background Engine Starting...");
 
 chrome.runtime.onInstalled.addListener(async () => {
-  await chrome.storage.local.set({ isProtectionOn: true }); // Default On
+  await chrome.storage.local.set({
+    isProtectionOn: true, // Default On
+    isAdBlockingOn: true, // Ad blocking default On
+    isCookieBannerBlockingOn: true // Cookie banner blocking default On
+  });
   await refreshBlocklist();
-  chrome.alarms.create(UPDATE_ALARM, { periodInMinutes: 60 }); 
+  chrome.alarms.create(UPDATE_ALARM, { periodInMinutes: 60 });
+
+  // Enable ad blocking static ruleset by default
+  await chrome.declarativeNetRequest.updateEnabledRulesets({
+    enableRulesetIds: ["easylist_rules"]
+  });
+
+  console.log("Echo: Ad blocking and cookie banner blocking initialized");
 });
 
 chrome.alarms.onAlarm.addListener(async (alarm) => {
@@ -19,7 +30,7 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area === 'local' && changes.isProtectionOn) {
     const isProtectionOn = changes.isProtectionOn.newValue;
-    
+
     if (isProtectionOn) {
       console.log("Echo: Protection Resumed.");
       refreshBlocklist(); // Re-apply rules
@@ -39,12 +50,30 @@ chrome.storage.onChanged.addListener((changes, area) => {
       chrome.action.setBadgeBackgroundColor({ color: "#8B949E" }); // Grey
     }
   }
-});
 
-// Update Initialization to respect saved state
-chrome.runtime.onInstalled.addListener(async () => {
-  await chrome.storage.local.set({ isProtectionOn: true }); // Default to true
-  await refreshBlocklist();
+  // LISTENER: Handle Ad Blocking Toggle
+  if (area === 'local' && changes.isAdBlockingOn) {
+    const isAdBlockingOn = changes.isAdBlockingOn.newValue;
+
+    if (isAdBlockingOn) {
+      console.log("Echo: Ad Blocking Enabled.");
+      chrome.declarativeNetRequest.updateEnabledRulesets({
+        enableRulesetIds: ["easylist_rules"]
+      }).catch(err => console.error("Error enabling ad blocking:", err));
+    } else {
+      console.log("Echo: Ad Blocking Disabled.");
+      chrome.declarativeNetRequest.updateEnabledRulesets({
+        disableRulesetIds: ["easylist_rules"]
+      }).catch(err => console.error("Error disabling ad blocking:", err));
+    }
+  }
+
+  // LISTENER: Handle Cookie Banner Blocking Toggle
+  // Content script checks storage directly, so just log the change
+  if (area === 'local' && changes.isCookieBannerBlockingOn) {
+    const isEnabled = changes.isCookieBannerBlockingOn.newValue;
+    console.log(`Echo: Cookie Banner Blocking ${isEnabled ? 'Enabled' : 'Disabled'}.`);
+  }
 });
 
 async function refreshBlocklist() {

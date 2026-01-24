@@ -172,6 +172,28 @@
             <div class="glass-panel rounded-2xl overflow-hidden divide-y divide-border-subtle">
                 <div class="p-6 flex items-center justify-between hover:bg-surface-cardHover transition-colors">
                     <div>
+                        <div class="font-medium text-text-primary">Ad Blocking</div>
+                        <div class="text-xs text-text-muted mt-1">Block advertisements using EasyList filters.</div>
+                    </div>
+                    <label class="relative inline-block w-11 h-6 cursor-pointer">
+                        <input type="checkbox" id="ad-blocking-toggle" class="sr-only peer">
+                        <div class="w-full h-full bg-surface-inset peer-checked:bg-accent-primary rounded-full transition-colors peer-focus:ring-4 peer-focus:ring-accent-primary/20"></div>
+                        <div class="absolute top-0.5 left-0.5 w-5 h-5 bg-neutral-0 rounded-full shadow transition-transform peer-checked:translate-x-5"></div>
+                    </label>
+                </div>
+                <div class="p-6 flex items-center justify-between hover:bg-surface-cardHover transition-colors">
+                    <div>
+                        <div class="font-medium text-text-primary">Cookie Banner Blocking</div>
+                        <div class="text-xs text-text-muted mt-1">Auto-accept necessary cookies, reject non-essential.</div>
+                    </div>
+                    <label class="relative inline-block w-11 h-6 cursor-pointer">
+                        <input type="checkbox" id="cookie-banner-toggle" class="sr-only peer">
+                        <div class="w-full h-full bg-surface-inset peer-checked:bg-accent-primary rounded-full transition-colors peer-focus:ring-4 peer-focus:ring-accent-primary/20"></div>
+                        <div class="absolute top-0.5 left-0.5 w-5 h-5 bg-neutral-0 rounded-full shadow transition-transform peer-checked:translate-x-5"></div>
+                    </label>
+                </div>
+                <div class="p-6 flex items-center justify-between hover:bg-surface-cardHover transition-colors">
+                    <div>
                         <div class="font-medium text-text-primary">Export Logs</div>
                         <div class="text-xs text-text-muted mt-1">Download your blocking history.</div>
                     </div>

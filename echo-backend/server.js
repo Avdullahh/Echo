@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const axios = require('axios');
 const JSONStream = require('JSONStream');
+const { generateAdBlockRules } = require('./easylist-parser');
 require('dotenv').config(); // <--- LOADS THE HIDDEN .ENV FILE
 
 const app = express();
@@ -24,7 +25,7 @@ mongoose.connect(MONGO_URI)
   .then(() => console.log('✅ Connected to MongoDB'))
   .catch(err => console.error('❌ MongoDB Connection Error:', err));
 
-// --- DATA MODEL ---
+// --- DATA MODELS ---
 const TrackerSchema = new mongoose.Schema({
   id: Number,
   domain: String,
@@ -33,6 +34,14 @@ const TrackerSchema = new mongoose.Schema({
   risk: String
 });
 const Tracker = mongoose.model('Tracker', TrackerSchema);
+
+// Ad Block Rules Cache Schema
+const AdBlockCacheSchema = new mongoose.Schema({
+  rules: Array,
+  metadata: Object,
+  cachedAt: { type: Date, default: Date.now }
+});
+const AdBlockCache = mongoose.model('AdBlockCache', AdBlockCacheSchema);
 
 // --- STREAMING SEED ROUTE ---
 app.get('/api/seed', async (req, res) => {
@@ -103,6 +112,55 @@ app.get('/api/blocklist', async (req, res) => {
     res.json(trackers);
   } catch (error) {
     res.status(500).json({ error: "Database error" });
+  }
+});
+
+// --- AD BLOCKING RULES ENDPOINT ---
+app.get('/api/adblock/rules', async (req, res) => {
+  console.log("🚫 Ad block rules requested");
+
+  try {
+    // Check cache (refresh if older than 7 days)
+    const cached = await AdBlockCache.findOne({});
+    const CACHE_DURATION = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+    if (cached && (Date.now() - cached.cachedAt.getTime()) < CACHE_DURATION) {
+      console.log("✅ Serving cached ad block rules");
+      return res.json(cached);
+    }
+
+    // Generate fresh rules
+    console.log("🔄 Generating fresh ad block rules from EasyList...");
+    const rulesData = await generateAdBlockRules();
+
+    // Save to cache
+    await AdBlockCache.deleteMany({});
+    await AdBlockCache.create(rulesData);
+
+    console.log(`💾 Cached ${rulesData.rules.length} ad block rules`);
+    res.json(rulesData);
+
+  } catch (error) {
+    console.error("❌ Ad block rules generation failed:", error.message);
+    res.status(500).json({ error: "Failed to generate ad block rules: " + error.message });
+  }
+});
+
+// --- FORCE REFRESH AD BLOCK RULES ---
+app.get('/api/adblock/refresh', async (req, res) => {
+  console.log("🔄 Force refresh ad block rules");
+
+  try {
+    const rulesData = await generateAdBlockRules();
+    await AdBlockCache.deleteMany({});
+    await AdBlockCache.create(rulesData);
+
+    console.log(`💾 Refreshed ${rulesData.rules.length} ad block rules`);
+    res.json({ message: "Success", count: rulesData.rules.length });
+
+  } catch (error) {
+    console.error("❌ Ad block refresh failed:", error.message);
+    res.status(500).json({ error: "Failed to refresh rules: " + error.message });
   }
 });
 

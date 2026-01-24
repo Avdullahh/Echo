@@ -34,14 +34,19 @@ export const analyzePrivacyFootprint = async (
   `;
 
   try {
-    // FIX: Switch to 'gemini-pro' (The standard, most reliable model)
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+    // Use 'gemini-1.5-flash' - it is the current standard for the Free Tier.
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
     const result = await model.generateContent(prompt);
     const response = await result.response;
     return response.text(); 
   } catch (error: any) {
     console.error("Gemini Error Details:", error);
     
-    return `**AI Analysis Failed**\n\nError: ${error.message || "Unknown Network Error"}.\n\nPlease check the console (F12) for details.`;
+    // Custom Error Message for the 404 issue
+    if (error.message && error.message.includes("404")) {
+      return `**AI Setup Required**\n\nThe "Generative Language API" is disabled on your Google Account.\n\n1. Go to console.cloud.google.com\n2. Search "Generative Language API"\n3. Click Enable.`;
+    }
+
+    return `**AI Analysis Failed**\n\nError: ${error.message || "Unknown Network Error"}.`;
   }
 };
