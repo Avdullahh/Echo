@@ -7,8 +7,14 @@ turn off and remain turned off until the user turns it back on.
 services turn on and remain turned on, unless specified elsewhere in the user's settings, 
 until the user turns it back off.
 
+-TIKTOK doesnt work at all.
+
 -When data is reset in settings page on the dashboard, the extension turns off even though it appears visually on
 
 -Make sure that ad blocking and cookie banner blocking is prestine.
+
+-Cosmetically removing a banner or advertisment has to work while still ensuring the website runs smoothly.
+
+-Add more lists like EasyList filter for ad blocking.
 
 -At the end of all implementations and optimisations, make the app as bug free as possible.
