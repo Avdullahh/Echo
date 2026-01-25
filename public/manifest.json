@@ -20,12 +20,20 @@
       "path": "rules/adblock_rules.json"
     }]
   },
-  "content_scripts": [{
-    "matches": ["<all_urls>"],
-    "js": ["assets/cookiebanner.js"],
-    "run_at": "document_idle",
-    "all_frames": false
-  }],
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["assets/cookiebanner.js"],
+      "run_at": "document_idle",
+      "all_frames": false
+    },
+    {
+      "matches": ["<all_urls>"],
+      "js": ["assets/adblocker.js"],
+      "run_at": "document_start",
+      "all_frames": true
+    }
+  ],
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self'; connect-src 'self' https://generativelanguage.googleapis.com http://localhost:3000"
   },

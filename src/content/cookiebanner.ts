@@ -99,18 +99,26 @@ function detectAndHandleBanners() {
  * Search entire document for cookie-related text
  */
 function searchForBannersInDocument() {
-  const allElements = document.querySelectorAll('div, section, aside, [role="dialog"], [role="banner"]');
+  const allElements = document.querySelectorAll('div, section, aside, [role="dialog"], [role="banner"], [role="region"]');
 
   for (const element of allElements) {
     const text = (element.textContent || '').toLowerCase();
 
-    // Look for cookie-related keywords
-    if ((text.includes('cookie') || text.includes('consent') || text.includes('privacy')) &&
-        text.length > 50 && text.length < 2000 &&
+    // Look for cookie-related keywords with more variations
+    const hasCookieText = text.includes('cookie') ||
+                          text.includes('consent') ||
+                          text.includes('privacy') ||
+                          text.includes('data processing') ||
+                          (text.includes('partners') && (text.includes('cookie') || text.includes('consent'))) ||
+                          text.includes('tracking') ||
+                          text.includes('personal data');
+
+    if (hasCookieText &&
+        text.length > 50 && text.length < 3000 &&
         isVisible(element as HTMLElement) &&
         !handled.has(element)) {
 
-      console.log('[Echo Cookie] Found potential banner via text search');
+      console.log('[Echo Cookie] Found potential banner via text search:', text.substring(0, 100));
       handleCookieBanner(element as HTMLElement);
       handled.add(element);
       break; // Only handle one at a time
@@ -149,28 +157,62 @@ function handleCookieBanner(banner: HTMLElement, attempt = 1) {
 
   // Priority 2: Try to find settings button to access necessary-only
   const settingsButton = findButtonInContainer(banner, SETTINGS_PATTERNS);
-  if (settingsButton && attempt === 1) {
+  if (settingsButton && attempt <= 2) {
     console.log('[Echo Cookie] Found settings button → Opening');
     clickButton(settingsButton);
 
     // Wait for settings panel to appear, then look for necessary-only
     setTimeout(() => {
+      // Look in whole document for necessary-only option
       const necessaryInPanel = findButtonInContainer(document.body, NECESSARY_ONLY_PATTERNS);
       if (necessaryInPanel) {
         console.log('[Echo Cookie] ✓ Found "Necessary Only" in settings → Clicking');
         clickButton(necessaryInPanel);
+
+        // Wait and verify banner is gone
+        setTimeout(() => {
+          if (isVisible(banner)) {
+            console.log('[Echo Cookie] Banner still visible after settings flow → Hiding');
+            hideBanner(banner);
+          }
+        }, RETRY_DELAY);
       } else {
-        // Look for a save/confirm button after potentially deselecting options
-        const saveButton = findButtonInContainer(document.body, [/save|confirm|continue/i]);
+        // Try to find and toggle OFF all optional cookie switches/checkboxes
+        const cookieSwitches = document.querySelectorAll('input[type="checkbox"][checked], .toggle[aria-checked="true"]');
+        let toggledAny = false;
+
+        cookieSwitches.forEach(sw => {
+          const label = sw.parentElement?.textContent?.toLowerCase() || '';
+          // Don't disable essential/necessary cookies
+          if (!label.includes('essential') && !label.includes('necessary') && !label.includes('required')) {
+            (sw as HTMLInputElement).click();
+            toggledAny = true;
+          }
+        });
+
+        if (toggledAny) {
+          console.log('[Echo Cookie] Toggled optional cookies OFF');
+        }
+
+        // Look for a save/confirm button
+        const saveButton = findButtonInContainer(document.body, [/save|confirm|continue|save\s+preferences|save\s+settings/i]);
         if (saveButton) {
           console.log('[Echo Cookie] Found save button → Clicking');
           clickButton(saveButton);
+
+          // Wait and check if banner is still visible
+          setTimeout(() => {
+            if (isVisible(banner)) {
+              console.log('[Echo Cookie] Banner still visible → Hiding');
+              hideBanner(banner);
+            }
+          }, RETRY_DELAY);
         } else {
-          console.log('[Echo Cookie] No necessary-only option found → Hiding');
+          console.log('[Echo Cookie] No save button found → Hiding');
           hideBanner(banner);
         }
       }
-    }, RETRY_DELAY * 2);
+    }, RETRY_DELAY * 3);
     return;
   }
 

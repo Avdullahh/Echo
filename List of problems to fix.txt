@@ -7,4 +7,8 @@ turn off and remain turned off until the user turns it back on.
 services turn on and remain turned on, unless specified elsewhere in the user's settings, 
 until the user turns it back off.
 
--AI for Digital Profile incorporated, but shows errors when used.
+-When data is reset in settings page on the dashboard, the extension turns off even though it appears visually on
+
+-Make sure that ad blocking and cookie banner blocking is prestine.
+
+-At the end of all implementations and optimisations, make the app as bug free as possible.

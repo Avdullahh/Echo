@@ -9,7 +9,7 @@ export interface TrackerEvent {
   id: number;
   host: string;
   domain: string;
-  category: string;
+  sourceWebsite: string; // The website where the tracker was blocked
   riskLevel: RiskLevel;
   action: 'Blocked' | 'Allowed';
   timestamp: string;

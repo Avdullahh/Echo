@@ -15,6 +15,7 @@ export default defineConfig({
         onboarding: resolve(root, 'onboarding.html'),
         background: resolve(root, 'src/background/index.ts'),
         cookiebanner: resolve(root, 'src/content/cookiebanner.ts'),
+        adblocker: resolve(root, 'src/content/adblocker.ts'),
       },
       output: {
         entryFileNames: 'assets/[name].js',

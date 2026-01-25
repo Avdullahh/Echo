@@ -66,7 +66,28 @@ export const COOKIE_BANNER_SELECTORS = [
   '.cc-window',
   '.cc-banner',
   '.cookie-modal',
-  '.consent-modal'
+  '.consent-modal',
+
+  // CookieInformation
+  '#coiOverlay',
+  '#coiPage',
+  '[id*="cookieinformation"]',
+
+  // Additional generic patterns
+  '[class*="consent-banner"]',
+  '[class*="consent-dialog"]',
+  '[class*="privacy-banner"]',
+  '[class*="privacy-notice"]',
+  '[class*="cookie-notification"]',
+  '[role="region"][aria-label*="cookie" i]',
+  '[role="region"][aria-label*="consent" i]',
+  '[role="dialog"][aria-label*="cookie" i]',
+  '[role="dialog"][aria-label*="consent" i]',
+
+  // Data processing / GDPR variants
+  '[class*="data-processing"]',
+  '[class*="gdpr-banner"]',
+  '[class*="privacy-consent"]'
 ];
 
 // Button text patterns for "Accept Necessary Only" or "Reject All"
@@ -98,6 +119,12 @@ export const NECESSARY_ONLY_PATTERNS = [
   /continue\s+without\s+accepting/i,
   /no\s+thanks/i,
   /i\s+decline/i,
+  /do\s+not\s+accept/i,
+  /only\s+necessary/i,
+  /only\s+essential/i,
+  /only\s+required/i,
+  /close/i,
+  /dismiss/i,
 
   // German
   /nur\s+notwendige/i,

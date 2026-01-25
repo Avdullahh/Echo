@@ -132,8 +132,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                 </td>
                 <td class="px-6 py-4">
-                    <span class="px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider bg-surface-inset text-text-secondary border border-border-subtle">
-                        ${t.category}
+                    <span class="px-2 py-1 rounded text-[10px] font-medium tracking-wide bg-surface-inset text-text-secondary border border-border-subtle">
+                        ${t.sourceWebsite}
                     </span>
                 </td>
                 <td class="px-6 py-4 text-right text-xs text-text-muted tabular-nums">
@@ -175,15 +175,15 @@ document.addEventListener('DOMContentLoaded', () => {
             }).join('');
         }
 
-        const catCounts = {};
-        cachedData.forEach(t => { catCounts[t.category] = (catCounts[t.category] || 0) + 1; });
-        const topCats = Object.entries(catCounts).sort((a, b) => b[1] - a[1]).slice(0, 4);
-        
+        const websiteCounts = {};
+        cachedData.forEach(t => { websiteCounts[t.sourceWebsite] = (websiteCounts[t.sourceWebsite] || 0) + 1; });
+        const topWebsites = Object.entries(websiteCounts).sort((a, b) => b[1] - a[1]).slice(0, 4);
+
         const catContainer = document.getElementById('categories-list');
         if (catContainer) {
-            catContainer.innerHTML = topCats.map(([cat, count]) => `
+            catContainer.innerHTML = topWebsites.map(([website, count]) => `
                 <div class="flex items-center justify-between p-3 rounded-lg border border-border-subtle bg-surface-inset/20">
-                    <span class="capitalize text-sm font-medium text-text-secondary">${cat}</span>
+                    <span class="text-sm font-medium text-text-secondary">${website}</span>
                     <span class="text-xs font-bold text-text-primary">${count}</span>
                 </div>
             `).join('');
@@ -212,9 +212,9 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             const topCos = Object.entries(companyCounts).sort((a,b) => b[1]-a[1]).slice(0,5).map(([name, count]) => ({ name, count }));
 
-            const catCounts = {};
-            cachedData.forEach(t => { catCounts[t.category] = (catCounts[t.category] || 0) + 1; });
-            const categories = Object.entries(catCounts).map(([label, count]) => ({ label, percent: Math.round((count/cachedData.length)*100) }));
+            const websiteCounts = {};
+            cachedData.forEach(t => { websiteCounts[t.sourceWebsite] = (websiteCounts[t.sourceWebsite] || 0) + 1; });
+            const categories = Object.entries(websiteCounts).map(([label, count]) => ({ label, percent: Math.round((count/cachedData.length)*100) }));
 
             const recent = cachedData.slice(0,5).map(t => ({ site: t.domain, status: 'Blocked' }));
 

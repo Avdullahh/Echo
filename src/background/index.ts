@@ -6,6 +6,19 @@ const UPDATE_ALARM = 'update-blocklist';
 console.log("Echo: Background Engine Starting...");
 
 chrome.runtime.onInstalled.addListener(async () => {
+  // Migrate old tracker data to new structure
+  const data = await chrome.storage.local.get(['detectedTrackers']);
+  if (data.detectedTrackers && data.detectedTrackers.length > 0) {
+    const firstTracker = data.detectedTrackers[0];
+    if (!firstTracker.hasOwnProperty('sourceWebsite')) {
+      console.log("Echo: Migrating to new data structure, clearing old tracker data");
+      await chrome.storage.local.set({
+        detectedTrackers: [],
+        trackersBlocked: 0
+      });
+    }
+  }
+
   await chrome.storage.local.set({
     isProtectionOn: true, // Default On
     isAdBlockingOn: true, // Ad blocking default On
@@ -131,7 +144,7 @@ let recentLogs = new Set<string>();
 chrome.declarativeNetRequest.onRuleMatchedDebug.addListener(async (info) => {
   const match = info.request;
   const domain = new URL(match.url).hostname;
-  
+
   if (recentLogs.has(domain)) return;
   recentLogs.add(domain);
   setTimeout(() => recentLogs.delete(domain), 2000);
@@ -139,11 +152,21 @@ chrome.declarativeNetRequest.onRuleMatchedDebug.addListener(async (info) => {
   const store = await chrome.storage.local.get(['trackerMetadata']);
   const meta = store.trackerMetadata ? store.trackerMetadata[domain] : null;
 
+  // Get the source website (where the user was browsing when tracker was blocked)
+  let sourceWebsite = 'Unknown';
+  try {
+    if (match.initiator) {
+      sourceWebsite = new URL(match.initiator).hostname;
+    }
+  } catch (e) {
+    sourceWebsite = 'Unknown';
+  }
+
   const event: TrackerEvent = {
     id: Date.now(),
     host: domain,
     domain: domain,
-    category: meta ? meta.category : 'Unknown',
+    sourceWebsite: sourceWebsite,
     company: meta ? meta.owner : 'Unknown',
     riskLevel: RiskLevel.WARNING,
     action: 'Blocked',
