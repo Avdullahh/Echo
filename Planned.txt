@@ -18,3 +18,7 @@ until the user turns it back off.
 -Add more lists like EasyList filter for ad blocking.
 
 -At the end of all implementations and optimisations, make the app as bug free as possible.
+
+-User feedback: Consider adding "Report broken site" feature.
+
+-Clicking on page shows an ad in a seperate window in extreme test.

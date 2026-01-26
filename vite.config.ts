@@ -15,7 +15,9 @@ export default defineConfig({
         onboarding: resolve(root, 'onboarding.html'),
         background: resolve(root, 'src/background/index.ts'),
         cookiebanner: resolve(root, 'src/content/cookiebanner.ts'),
-        adblocker: resolve(root, 'src/content/adblocker.ts'),
+        // Ad blocker split into two scripts for CSP bypass
+        'adblocker-main': resolve(root, 'src/content/adblocker-main.ts'),
+        'adblocker-isolated': resolve(root, 'src/content/adblocker-isolated.ts'),
       },
       output: {
         entryFileNames: 'assets/[name].js',
