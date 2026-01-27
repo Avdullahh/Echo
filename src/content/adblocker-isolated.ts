@@ -150,15 +150,123 @@ function injectStyles(): void {
   const target = document.head || document.documentElement;
   if (target) {
     target.appendChild(style);
-    console.log('[Echo AdBlock] ISOLATED: Injected CSS rules');
+    console.log('[Echo AdBlock] ISOLATED: Injected hardcoded CSS rules');
   }
 }
 
 function removeStyles(): void {
-  const style = document.getElementById('echo-adblock-styles');
-  if (style) {
-    style.remove();
-    console.log('[Echo AdBlock] ISOLATED: Removed CSS rules');
+  // Remove all Echo-injected styles
+  const styleIds = ['echo-adblock-styles', 'echo-cosmetic-generic', 'echo-cosmetic-domain'];
+  for (const id of styleIds) {
+    const style = document.getElementById(id);
+    if (style) {
+      style.remove();
+    }
+  }
+  console.log('[Echo AdBlock] ISOLATED: Removed CSS rules');
+}
+
+// ===========================================
+// GENERATED COSMETIC RULES (from EasyList)
+// ===========================================
+
+let domainRulesCache: Record<string, string[]> | null = null;
+
+/**
+ * Load and inject generic cosmetic CSS from generated file
+ */
+async function loadGeneratedCSS(): Promise<void> {
+  if (document.getElementById('echo-cosmetic-generic')) return;
+
+  try {
+    const cssUrl = chrome.runtime.getURL('rules/cosmetic-generic.css');
+    const response = await fetch(cssUrl);
+
+    if (!response.ok) {
+      console.log('[Echo AdBlock] ISOLATED: No generated cosmetic CSS found');
+      return;
+    }
+
+    const css = await response.text();
+
+    const style = document.createElement('style');
+    style.id = 'echo-cosmetic-generic';
+    style.textContent = css;
+
+    const target = document.head || document.documentElement;
+    if (target) {
+      target.appendChild(style);
+      console.log(`[Echo AdBlock] ISOLATED: Injected generated cosmetic CSS (${(css.length / 1024).toFixed(1)} KB)`);
+    }
+  } catch (error) {
+    // Silently fail - hardcoded rules are already active as fallback
+    console.log('[Echo AdBlock] ISOLATED: Could not load generated CSS, using hardcoded fallback');
+  }
+}
+
+/**
+ * Load domain rules JSON and cache in memory
+ */
+async function loadDomainRules(): Promise<Record<string, string[]>> {
+  if (domainRulesCache !== null) {
+    return domainRulesCache;
+  }
+
+  try {
+    const jsonUrl = chrome.runtime.getURL('rules/cosmetic-domains.json');
+    const response = await fetch(jsonUrl);
+
+    if (!response.ok) {
+      domainRulesCache = {};
+      return domainRulesCache;
+    }
+
+    const data: Record<string, string[]> = await response.json();
+    domainRulesCache = data;
+    console.log(`[Echo AdBlock] ISOLATED: Loaded domain rules for ${Object.keys(data).length} domains`);
+    return data;
+  } catch (error) {
+    domainRulesCache = {};
+    return domainRulesCache;
+  }
+}
+
+/**
+ * Apply domain-specific cosmetic rules for current hostname
+ */
+async function applyDomainRules(): Promise<void> {
+  if (document.getElementById('echo-cosmetic-domain')) return;
+
+  const domainRules = await loadDomainRules();
+  const hostname = window.location.hostname.toLowerCase();
+
+  // Collect selectors for this domain and parent domains
+  const selectors: string[] = [];
+
+  // Check exact domain and parent domains (e.g., www.example.com, example.com)
+  const parts = hostname.split('.');
+  for (let i = 0; i < parts.length - 1; i++) {
+    const domain = parts.slice(i).join('.');
+    if (domainRules[domain]) {
+      selectors.push(...domainRules[domain]);
+    }
+  }
+
+  if (selectors.length === 0) return;
+
+  // Deduplicate selectors
+  const uniqueSelectors = [...new Set(selectors)];
+
+  const css = uniqueSelectors.join(',\n') + ' {\n  display: none !important;\n}';
+
+  const style = document.createElement('style');
+  style.id = 'echo-cosmetic-domain';
+  style.textContent = css;
+
+  const target = document.head || document.documentElement;
+  if (target) {
+    target.appendChild(style);
+    console.log(`[Echo AdBlock] ISOLATED: Applied ${uniqueSelectors.length} domain-specific rules for ${hostname}`);
   }
 }
 
@@ -223,8 +331,12 @@ function init(): void {
       return;
     }
 
-    // Inject CSS rules
+    // 1. Inject hardcoded CSS rules immediately (instant fallback)
     injectStyles();
+
+    // 2. Load generated cosmetic rules asynchronously
+    loadGeneratedCSS().catch(() => {});
+    applyDomainRules().catch(() => {});
 
     // Handle Shadow DOM (run after DOM is ready)
     if (document.readyState === 'loading') {
