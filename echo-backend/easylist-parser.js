@@ -1,7 +1,7 @@
 const axios = require('axios');
 
 const EASYLIST_URL = 'https://easylist.to/easylist/easylist.txt';
-const MAX_RULES = 25000; // Stay well under Chrome's static rule limit
+const MAX_RULES = 70000; // EasyList has ~60k network rules, Chrome allows up to 300k static rules
 
 /**
  * Fetches and parses EasyList, converting to declarativeNetRequest rules
@@ -105,9 +105,9 @@ function parseLineToRule(line, id) {
       else if (option === 'font') resourceTypes = ['font'];
       else if (option === 'ping') resourceTypes = ['ping'];
 
-      // Domain type
-      else if (option === 'third-party') domainType = ['thirdParty'];
-      else if (option === '~third-party') domainType = ['firstParty'];
+      // Domain type (must be string, not array per Chrome MV3 spec)
+      else if (option === 'third-party') domainType = 'thirdParty';
+      else if (option === '~third-party') domainType = 'firstParty';
 
       // Domain restrictions
       else if (option.startsWith('domain=')) {
