@@ -29,6 +29,11 @@
         "id": "annoyances_rules",
         "enabled": false,
         "path": "rules/annoyances_rules.json"
+      },
+      {
+        "id": "exception_rules",
+        "enabled": true,
+        "path": "rules/exception_rules.json"
       }
     ]
   },

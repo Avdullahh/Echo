@@ -18,19 +18,34 @@ const FILTER_LISTS = {
     url: 'https://easylist.to/easylist/easylist.txt',
     outputFile: 'easylist_rules.json',
     startId: 1,
-    maxRules: 70000
+    maxRules: 70000,
+    parseExceptions: false  // Block rules only
   },
   easyprivacy: {
     url: 'https://easylist.to/easylist/easyprivacy.txt',
     outputFile: 'easyprivacy_rules.json',
     startId: 100001,
-    maxRules: 50000
+    maxRules: 50000,
+    parseExceptions: false  // Block rules only
   },
   annoyances: {
     url: 'https://easylist.to/easylist/fanboy-annoyance.txt',
     outputFile: 'annoyances_rules.json',
     startId: 200001,
-    maxRules: 30000
+    maxRules: 30000,
+    parseExceptions: false  // Block rules only
+  },
+  // Exception rules from all lists combined
+  exceptions: {
+    urls: [
+      'https://easylist.to/easylist/easylist.txt',
+      'https://easylist.to/easylist/easyprivacy.txt',
+      'https://easylist.to/easylist/fanboy-annoyance.txt'
+    ],
+    outputFile: 'exception_rules.json',
+    startId: 300001,
+    maxRules: 20000,
+    parseExceptions: true  // Exception rules only
   }
 };
 
@@ -62,20 +77,40 @@ function fetchUrl(url) {
 
 /**
  * Parse a single filter line into a Chrome declarativeNetRequest rule
+ * @param {string} line - The filter line to parse
+ * @param {number} id - The rule ID to assign
+ * @param {boolean} parseExceptions - If true, only parse @@ rules; if false, skip @@ rules
  */
-function parseLineToRule(line, id) {
+function parseLineToRule(line, id, parseExceptions = false) {
   line = line.trim();
 
-  // Skip comments, empty lines, cosmetic filters, and exception rules
+  // Skip comments, empty lines, and cosmetic filters
   if (!line ||
       line.startsWith('!') ||
       line.startsWith('[') ||
       line.includes('##') ||
       line.includes('#@#') ||
       line.includes('#?#') ||
-      line.includes('#$#') ||
-      line.startsWith('@@')) {
+      line.includes('#$#')) {
     return null;
+  }
+
+  // Handle exception rules based on parseExceptions flag
+  const isException = line.startsWith('@@');
+
+  if (parseExceptions && !isException) {
+    // We want exceptions only, but this is a block rule
+    return null;
+  }
+
+  if (!parseExceptions && isException) {
+    // We want block rules only, but this is an exception
+    return null;
+  }
+
+  // Strip @@ prefix for exception rules
+  if (isException) {
+    line = line.substring(2);
   }
 
   let urlFilter = null;
@@ -167,11 +202,11 @@ function parseLineToRule(line, id) {
   if (urlFilter === '*' || urlFilter === '**' || urlFilter === '*^*') return null;
   if (!resourceTypes || resourceTypes.length === 0) return null;
 
-  // Build rule
+  // Build rule with appropriate action and priority
   const rule = {
     id,
-    priority: 1,
-    action: { type: 'block' },
+    priority: isException ? 100 : 1,  // Exception rules have higher priority
+    action: { type: isException ? 'allow' : 'block' },
     condition: {
       urlFilter,
       resourceTypes
@@ -192,21 +227,29 @@ async function processFilterList(name, config) {
   console.log(`\nProcessing ${name}...`);
 
   try {
-    const content = await fetchUrl(config.url);
-    const lines = content.split('\n');
-    console.log(`  Received ${lines.length} lines`);
+    // Support both single URL and multiple URLs (for combined exception rules)
+    const urls = config.urls || [config.url];
+    let allLines = [];
+
+    for (const url of urls) {
+      const content = await fetchUrl(url);
+      const lines = content.split('\n');
+      allLines = allLines.concat(lines);
+      console.log(`  Received ${lines.length} lines from ${url.split('/').pop()}`);
+    }
 
     const rules = [];
     let ruleId = config.startId;
     let skipped = 0;
+    const parseExceptions = config.parseExceptions || false;
 
-    for (const line of lines) {
+    for (const line of allLines) {
       if (rules.length >= config.maxRules) {
         console.log(`  Reached max rule limit (${config.maxRules})`);
         break;
       }
 
-      const rule = parseLineToRule(line, ruleId);
+      const rule = parseLineToRule(line, ruleId, parseExceptions);
       if (rule) {
         rules.push(rule);
         ruleId++;
@@ -215,7 +258,8 @@ async function processFilterList(name, config) {
       }
     }
 
-    console.log(`  Parsed ${rules.length} rules (skipped ${skipped} non-network filters)`);
+    const ruleType = parseExceptions ? 'exception (allow)' : 'block';
+    console.log(`  Parsed ${rules.length} ${ruleType} rules (skipped ${skipped} non-matching filters)`);
 
     // Write to file
     const outputPath = path.join(OUTPUT_DIR, config.outputFile);
