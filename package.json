@@ -7,7 +7,11 @@
     "dev": "vite",
     "generate:rules": "node scripts/generate-adblock-rules.js",
     "generate:rules:force": "node scripts/generate-adblock-rules.js --force",
-    "prebuild": "npm run generate:rules",
+    "generate:cosmetic": "node scripts/generate-cosmetic-rules.js",
+    "generate:cosmetic:force": "node scripts/generate-cosmetic-rules.js --force",
+    "generate:all": "npm run generate:rules && npm run generate:cosmetic",
+    "generate:all:force": "npm run generate:rules:force && npm run generate:cosmetic:force",
+    "prebuild": "npm run generate:all",
     "build": "tsc && vite build",
     "preview": "vite preview"
   },
