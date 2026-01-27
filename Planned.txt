@@ -22,3 +22,5 @@ until the user turns it back off.
 -User feedback: Consider adding "Report broken site" feature.
 
 -Clicking on page shows an ad in a seperate window in extreme test.
+
+-Outlook emailed attachments cannot be opened or downloaded. Maybe lay off on some rules in certain popular websites?

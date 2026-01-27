@@ -14,11 +14,23 @@
     "<all_urls>"
   ],
   "declarative_net_request": {
-    "rule_resources": [{
-      "id": "easylist_rules",
-      "enabled": true,
-      "path": "rules/adblock_rules.json"
-    }]
+    "rule_resources": [
+      {
+        "id": "easylist_rules",
+        "enabled": true,
+        "path": "rules/easylist_rules.json"
+      },
+      {
+        "id": "easyprivacy_rules",
+        "enabled": true,
+        "path": "rules/easyprivacy_rules.json"
+      },
+      {
+        "id": "annoyances_rules",
+        "enabled": false,
+        "path": "rules/annoyances_rules.json"
+      }
+    ]
   },
   "content_scripts": [
     {
