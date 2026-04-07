@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
-import '../index.css'; 
-import { ExtensionPopup } from './components/ExtensionPopup'; 
+import '../index.css';
+import { ExtensionPopup } from './components/ExtensionPopup';
 import { TrackerEvent } from '../shared/types';
-import { analyzeDigitalProfile } from '../shared/services/profileAnalyzer';
+import { buildProfileFromEvents } from '../shared/services/profileUtils';
 
-// AFTER
 const PopupApp = () => {
   const [isProtectionOn, setProtectionOn] = useState<boolean | null>(null);
   const [realTrackers, setRealTrackers] = useState<TrackerEvent[]>([]);
@@ -21,52 +20,29 @@ const PopupApp = () => {
         setBlockedCount(result.trackersBlocked || 0);
         setProtectionOn(result.isProtectionOn !== undefined ? result.isProtectionOn : true);
 
-        // Derive persona from real tracker data
-        if (trackers.length > 0) {
-          const companyCounts: Record<string, number> = {};
-          const sourceCounts: Record<string, number> = {};
-          trackers.forEach((e: TrackerEvent) => {
-            const name = e.company || e.domain || 'Unknown';
-            companyCounts[name] = (companyCounts[name] || 0) + 1;
-            const site = e.sourceWebsite || 'unknown';
-            sourceCounts[site] = (sourceCounts[site] || 0) + 1;
-          });
-          const total = trackers.length;
-          const allCompanies = Object.entries(companyCounts)
-          .sort((a, b) => b[1] - a[1])
-          .map(([name, count]) => ({ name, count: count as number }));
-          const allWebsites = Object.entries(sourceCounts)
-          .sort((a, b) => (b[1] as number) - (a[1] as number))
-          .map(([label, count]) => ({
-            label,
-            percent: Math.round(((count as number) / total) * 100)
-          }));
-          
-          const markdown = analyzeDigitalProfile(allCompanies, allWebsites);
-          const titleMatch = markdown.match(/\*\*(.+?)\*\*/);
-          setPersona(titleMatch ? titleMatch[1] : 'Active Browser');
-          setConfidenceScore(Math.min(100, Math.round((trackers.length / 80) * 60 + (allWebsites.length / 15) * 40)));
+        const derived = buildProfileFromEvents(trackers);
+        if (derived) {
+          setPersona(derived.persona);
+          setConfidenceScore(derived.confidenceScore);
         }
       });
     } else {
-        setProtectionOn(true);
+      setProtectionOn(true);
     }
   }, []);
 
-  // CHANGE 3: Wrapper to save state immediately when toggled
   const handleToggle = (val: boolean) => {
-      setProtectionOn(val);
-      if (typeof chrome !== 'undefined' && chrome.storage) {
-          chrome.storage.local.set({ isProtectionOn: val });
-      }
+    setProtectionOn(val);
+    if (typeof chrome !== 'undefined' && chrome.storage) {
+      chrome.storage.local.set({ isProtectionOn: val });
+    }
   };
 
-  // CHANGE 4: Prevent rendering until state is known
-  if (isProtectionOn === null) return null; 
+  if (isProtectionOn === null) return null;
 
   return (
     <div className="w-[350px] h-[550px] bg-bg-canvas text-text-primary overflow-y-auto border border-border-subtle shadow-2xl">
-      <ExtensionPopup 
+      <ExtensionPopup
         trackers={realTrackers}
         blockedCount={blockedCount}
         isProtectionOn={isProtectionOn}
@@ -74,12 +50,12 @@ const PopupApp = () => {
         persona={persona}
         confidenceScore={confidenceScore}
         onOpenDashboard={(tab) => {
-            const targetUrl = `dashboard.html#${tab}`;
-            if (typeof chrome !== 'undefined' && chrome.tabs) {
-                chrome.tabs.create({ url: targetUrl });
-            } else {
-                window.open(targetUrl, '_blank');
-            }
+          const targetUrl = `dashboard.html#${tab}`;
+          if (typeof chrome !== 'undefined' && chrome.tabs) {
+            chrome.tabs.create({ url: targetUrl });
+          } else {
+            window.open(targetUrl, '_blank');
+          }
         }}
       />
     </div>

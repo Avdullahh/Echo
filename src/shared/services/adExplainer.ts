@@ -55,16 +55,7 @@ const COMPANY_NAMES: Record<string, string> = {
 // Site patterns → inferred interest category
 // Matches against sourceWebsite values saved by background/index.ts.
 // ---------------------------------------------------------------------------
-const CATEGORY_PATTERNS: Array<{ keywords: string[]; label: string }> = [
-  { keywords: ['amazon', 'ebay', 'etsy', 'shopify', 'asos', 'shop'],       label: 'Online Shopper' },
-  { keywords: ['github', 'stackoverflow', 'dev.to', 'npmjs', 'vscode'],     label: 'Developer' },
-  { keywords: ['youtube', 'netflix', 'twitch', 'spotify', 'vimeo'],         label: 'Entertainment Browser' },
-  { keywords: ['bbc', 'cnn', 'reuters', 'guardian', 'nytimes', 'news'],     label: 'News Reader' },
-  { keywords: ['facebook', 'instagram', 'twitter', 'reddit', 'linkedin'],   label: 'Social Media User' },
-  { keywords: ['bank', 'investing', 'trading', 'paypal', 'finance'],        label: 'Finance Browser' },
-  { keywords: ['steam', 'xbox', 'playstation', 'ign', 'gamespot'],          label: 'Gamer' },
-  { keywords: ['nhs', 'webmd', 'healthline', 'mayoclinic', 'patient'],      label: 'Health Researcher' },
-];
+import { CATEGORY_PATTERNS } from '../constants/categoryKeywords';
 
 // ---------------------------------------------------------------------------
 // Helpers

@@ -7,7 +7,7 @@ import { EntityDetail, PersonaDetail } from './components/Details';
 import { TutorialOverlay } from './components/TutorialOverlay';
 import { BlockedScreen } from './components/BlockedScreen';
 import { MOCK_USER_PROFILE, MOCK_REPORTS_DATA } from './services/mockData';
-import { analyzeDigitalProfile } from './shared/services/profileAnalyzer';
+import { buildProfileFromEvents } from './shared/services/profileUtils';
 import { RiskLevel } from './types';
 
 // ---------------------------------------------------------------------------
@@ -17,58 +17,13 @@ const MOCK_DOMAINS = [
   'analytics.google.com', 'facebook.net', 'criteo.com', 'doubleclick.net',
   'tiktok.com', 'hotjar.com', 'bing.com', 'adservice.google.com'
 ];
-const MOCK_CATEGORIES = ['Marketing', 'Analytics', 'Social'];
+
+// Extended category pool so dev simulation produces varied profiles
+const MOCK_CATEGORIES = [
+  'Marketing', 'Analytics', 'Social', 'Video', 'Shopping', 'News', 'Tech'
+];
 
 const IS_EXTENSION = typeof chrome !== 'undefined' && !!chrome?.storage?.local;
-
-// ---------------------------------------------------------------------------
-// Profile derivation helper
-// Converts flat TrackerEvent[] into the shape profileAnalyzer expects
-// ---------------------------------------------------------------------------
-function buildProfileFromEvents(events: any[]): typeof MOCK_USER_PROFILE {
-  if (events.length === 0) {
-    return { ...MOCK_USER_PROFILE, confidenceScore: 0, persona: 'Unknown Entity' };
-  }
-
-  const companyCounts: Record<string, number> = {};
-  const sourceCounts: Record<string, number> = {};
-
-  // Count ALL events — no slicing here
-  events.forEach(e => {
-    const name = e.company || e.domain || 'Unknown';
-    companyCounts[name] = (companyCounts[name] || 0) + 1;
-    const site = e.sourceWebsite || e.source || 'unknown';
-    sourceCounts[site] = (sourceCounts[site] || 0) + 1;
-  });
-
-  // Pass ALL companies to the analyzer — sorted by frequency, no cap
-  const allCompanies = Object.entries(companyCounts)
-    .sort((a, b) => b[1] - a[1])
-    .map(([name, count]) => ({ name, count: count as number }));
-
-  // Pass ALL source sites with accurate percentages
-  const totalEvents = events.length;
-  const allWebsites = Object.entries(sourceCounts)
-    .sort((a, b) => (b[1] as number) - (a[1] as number))
-    .map(([label, count]) => ({
-      label,
-      percent: Math.round(((count as number) / totalEvents) * 100)
-    }));
-
-  const markdownResult = analyzeDigitalProfile(allCompanies, allWebsites);
-  const titleMatch = markdownResult.match(/\*\*[^\s*].*?\*\*/);
-  const persona = titleMatch
-    ? titleMatch[0].replace(/\*\*/g, '').replace(/^[^\w]+/, '').trim()
-    : 'Active Browser';
-
-  const confidenceScore = Math.min(100, Math.round((totalEvents / 80) * 60 + (allWebsites.length / 15) * 40));
-
-  return {
-    ...MOCK_USER_PROFILE,
-    persona,
-    confidenceScore,
-  };
-}
 
 // ---------------------------------------------------------------------------
 
@@ -97,7 +52,7 @@ export default function App() {
   // REAL DATA: Load from chrome.storage on mount + subscribe to live changes
   // ---------------------------------------------------------------------------
   useEffect(() => {
-    if (!IS_EXTENSION) return; // dev-mode fallback handles its own seeding below
+    if (!IS_EXTENSION) return;
 
     // Initial load
     chrome.storage.local.get(
@@ -105,14 +60,15 @@ export default function App() {
       (result) => {
         const stored: any[] = result.detectedTrackers || [];
         setReportsData(stored);
-        setProfile(buildProfileFromEvents(stored));
+        const derived = buildProfileFromEvents(stored);
+        if (derived) setProfile({ ...MOCK_USER_PROFILE, ...derived });
         if (result.isProtectionOn !== undefined) {
           setIsProtectionOn(result.isProtectionOn);
         }
       }
     );
 
-    // Live updates — background script writes new events here
+    // Live updates — background script writes new events to storage
     const listener = (
       changes: Record<string, chrome.storage.StorageChange>,
       area: string
@@ -122,7 +78,8 @@ export default function App() {
       if (changes.detectedTrackers) {
         const updated: any[] = changes.detectedTrackers.newValue || [];
         setReportsData(updated);
-        setProfile(buildProfileFromEvents(updated));
+        const derived = buildProfileFromEvents(updated);
+        if (derived) setProfile({ ...MOCK_USER_PROFILE, ...derived });
       }
 
       if (changes.isProtectionOn) {
@@ -140,14 +97,12 @@ export default function App() {
   // ---------------------------------------------------------------------------
   useEffect(() => {
     if (IS_EXTENSION) return;
-
-    // Seed initial mock data once
     setReportsData(MOCK_REPORTS_DATA);
     setProfile(MOCK_USER_PROFILE);
   }, []);
 
   useEffect(() => {
-    if (IS_EXTENSION) return;        // extension uses real data, no simulation needed
+    if (IS_EXTENSION) return;
     if (!isProtectionOn) return;
 
     const interval = setInterval(() => {
@@ -183,12 +138,8 @@ export default function App() {
     setReportsData([]);
     setProfile({ ...MOCK_USER_PROFILE, confidenceScore: 0, persona: 'Unknown Entity' });
 
-    // Also wipe storage so the background script starts fresh
     if (IS_EXTENSION) {
-      chrome.storage.local.set({
-        detectedTrackers: [],
-        trackersBlocked: 0
-      });
+      chrome.storage.local.set({ detectedTrackers: [], trackersBlocked: 0 });
       chrome.action?.setBadgeText?.({ text: '' });
     }
   };
@@ -201,7 +152,6 @@ export default function App() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-zinc-800 p-4 font-sans">
 
-      {/* APP CONTAINER */}
       <div
         className={`relative shadow-2xl rounded-2xl overflow-hidden ring-1 ring-white/10 bg-black transition-all duration-500 ease-in-out
           ${view === 'popup' ? 'w-[350px] h-[550px]' : 'w-full max-w-[1400px] min-h-[800px]'}`}
@@ -223,7 +173,10 @@ export default function App() {
           />
         )}
 
-        {/* LAYER 3: INTERVENTION OVERLAY */}
+        {/* LAYER 3: INTERVENTION OVERLAY
+            Note: domain is hardcoded for simulation purposes only.
+            This is a demo trigger — in production this would receive
+            the actual active tab's hostname from chrome.tabs. */}
         {showIntervention && (
           <Intervention
             domain="homechef.com"

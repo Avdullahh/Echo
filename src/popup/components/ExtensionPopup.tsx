@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Power, LayoutDashboard, Settings, Home, FileText, Info, X } from 'lucide-react';
+import { Power, Settings, Home, LayoutDashboard, FileText, Info, X } from 'lucide-react';
 import { TrackerEvent, DashboardTab } from '../../shared/types';
 import { explainAds, AdExplanation } from '../../shared/services/adExplainer';
 

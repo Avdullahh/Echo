@@ -45,25 +45,23 @@ document.addEventListener('DOMContentLoaded', () => {
             const count = data.trackersBlocked || 0;
             cachedData = data.detectedTrackers || [];
             const isProtectionOn = data.isProtectionOn !== undefined ? data.isProtectionOn : true;
-
-            // A. Update Home Counter
+    
             const homeCount = document.getElementById('home-total-blocked');
-            if(homeCount) homeCount.textContent = count.toLocaleString();
-
-            // B. Update System Status
+            if (homeCount) homeCount.textContent = count.toLocaleString();
+    
             updateSystemStatus(isProtectionOn);
-
-            // C. Update Timestamp
+    
             const timeLabel = document.getElementById('last-updated-time');
             if (timeLabel) timeLabel.textContent = new Date().toLocaleTimeString();
-
-            // D. Render Table
+    
             renderTrafficTable(cachedData);
-
-            // E. Refresh Reports if active
+    
             if (window.location.hash === '#report') {
                 generateReport();
             }
+    
+            // AUTO-GENERATE persona whenever data refreshes
+            generatePersonaFromData();
         });
     }
     
@@ -207,16 +205,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const aiTitle = document.getElementById('ai-persona-title');
     const aiDesc = document.getElementById('ai-persona-desc');
 
+    // Show the container immediately with a prompt — don't hide it until clicked
+    if (aiContainer) aiContainer.classList.remove('hidden');
+    if (aiTitle) aiTitle.textContent = 'Your Profile Awaits';
+    if (aiDesc) aiDesc.textContent = 'Press "Generate Persona" to see how advertising algorithms currently classify you based on your browsing data.';
+
     if (aiBtn) {
         aiBtn.addEventListener('click', async () => {
             aiBtn.disabled = true;
             aiBtn.textContent = "Analyzing...";
-            aiContainer.classList.remove('hidden');
             aiTitle.textContent = "Processing...";
             aiDesc.textContent = "Aggregating tracker data to infer profile...";
 
             try {
-                // Build company counts from ALL events, using domain as fallback
                 const companyMap = {};
                 cachedData.forEach(function(t) {
                     const name = (t.company && t.company !== 'Unknown') ? t.company : t.domain;
@@ -226,7 +227,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     .sort(function(a, b) { return b[1] - a[1]; })
                     .map(function(entry) { return { name: entry[0], count: entry[1] }; });
 
-                // Build website counts from ALL events
                 const siteMap = {};
                 const totalEvents = cachedData.length;
                 cachedData.forEach(function(t) {
@@ -241,13 +241,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         return { label: entry[0], percent: Math.round((entry[1] / totalEvents) * 100) };
                     });
 
-                const recent = cachedData.slice(0, 5).map(function(t) {
-                    return { site: t.domain, status: 'Blocked' };
-                });
-
-                const resultText = await analyzePrivacyFootprint(allCompanies, allSites, recent);
-                aiTitle.textContent = "Digital Persona Generated";
-                aiDesc.innerHTML = resultText.replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                const resultText = await analyzePrivacyFootprint(allCompanies, allSites, []);
+                aiTitle.textContent = "Your Digital Profile";
+                aiDesc.innerHTML = resultText
+                    .replace(/\n/g, '<br>')
+                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
                 aiBtn.textContent = "Regenerate";
                 aiBtn.disabled = false;
             } catch (err) {
