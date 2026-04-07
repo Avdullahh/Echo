@@ -7,8 +7,6 @@ turn off and remain turned off until the user turns it back on.
 services turn on and remain turned on, unless specified elsewhere in the user's settings, 
 until the user turns it back off.
 
--TIKTOK doesnt work at all.
-
 -When data is reset in settings page on the dashboard, the extension turns off even though it appears visually on
 
 -Make sure that ad blocking and cookie banner blocking is prestine.
@@ -24,3 +22,7 @@ until the user turns it back off.
 -Clicking on page shows an ad in a seperate window in extreme test.
 
 -Outlook emailed attachments cannot be opened or downloaded. Maybe lay off on some rules in certain popular websites?
+
+-Refreshing overview page in the dashboard completely breaks the dashboard.
+
+-Migrate all block lists to MongoDB.
