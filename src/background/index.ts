@@ -182,7 +182,7 @@ async function saveEvent(newEvent: TrackerEvent) {
   let count = (result.trackersBlocked || 0) + 1; // Increment
 
   events.unshift(newEvent);
-  if (events.length > 200) events = events.slice(0, 200);
+  if (events.length > 2000) events = events.slice(0, 2000);
 
   // CHANGE: Update the visual badge
   chrome.action.setBadgeText({ text: count.toString() });

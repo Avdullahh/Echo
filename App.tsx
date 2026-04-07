@@ -30,38 +30,38 @@ function buildProfileFromEvents(events: any[]): typeof MOCK_USER_PROFILE {
     return { ...MOCK_USER_PROFILE, confidenceScore: 0, persona: 'Unknown Entity' };
   }
 
-  // Count occurrences per company/domain
   const companyCounts: Record<string, number> = {};
   const sourceCounts: Record<string, number> = {};
 
+  // Count ALL events — no slicing here
   events.forEach(e => {
     const name = e.company || e.domain || 'Unknown';
     companyCounts[name] = (companyCounts[name] || 0) + 1;
-
     const site = e.sourceWebsite || e.source || 'unknown';
     sourceCounts[site] = (sourceCounts[site] || 0) + 1;
   });
 
-  const topCompanies = Object.entries(companyCounts)
+  // Pass ALL companies to the analyzer — sorted by frequency, no cap
+  const allCompanies = Object.entries(companyCounts)
     .sort((a, b) => b[1] - a[1])
-    .slice(0, 10)
     .map(([name, count]) => ({ name, count: count as number }));
 
-  const total = events.length || 1;
-  const websites = Object.entries(sourceCounts)
+  // Pass ALL source sites with accurate percentages
+  const totalEvents = events.length;
+  const allWebsites = Object.entries(sourceCounts)
+    .sort((a, b) => (b[1] as number) - (a[1] as number))
     .map(([label, count]) => ({
       label,
-      percent: Math.round(((count as number) / total) * 100)
-    }))
-    .slice(0, 10);
+      percent: Math.round(((count as number) / totalEvents) * 100)
+    }));
 
-  // analyzeDigitalProfile returns a markdown string; we parse just the title
-  // for the persona field and use event count as a proxy for confidenceScore.
-  const markdownResult = analyzeDigitalProfile(topCompanies, websites);
-  const titleMatch = markdownResult.match(/\*\*(.+?)\*\*/);
-  const persona = titleMatch ? titleMatch[1] : 'Active Browser';
+  const markdownResult = analyzeDigitalProfile(allCompanies, allWebsites);
+  const titleMatch = markdownResult.match(/\*\*[^\s*].*?\*\*/);
+  const persona = titleMatch
+    ? titleMatch[0].replace(/\*\*/g, '').replace(/^[^\w]+/, '').trim()
+    : 'Active Browser';
 
-  const confidenceScore = Math.min(100, Math.round((events.length / 50) * 100));
+  const confidenceScore = Math.min(100, Math.round((totalEvents / 80) * 60 + (allWebsites.length / 15) * 40));
 
   return {
     ...MOCK_USER_PROFILE,
@@ -257,6 +257,7 @@ export default function App() {
             isProtectionOn={isProtectionOn}
             setProtectionOn={setIsProtectionOn}
             onOpenDashboard={handleOpenDashboard}
+            profile={profile}
           />
         ) : (
           <Dashboard

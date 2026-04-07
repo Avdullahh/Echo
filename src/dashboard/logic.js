@@ -146,21 +146,23 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- 4. REPORTS ENGINE ---
     function generateReport() {
         if (!cachedData || cachedData.length === 0) return;
-
-        const companyCounts = {};
-        cachedData.forEach(t => {
+    
+        const companyMap = {};
+        cachedData.forEach(function(t) {
             const name = (t.company && t.company !== 'Unknown') ? t.company : t.domain;
-            companyCounts[name] = (companyCounts[name] || 0) + 1;
+            if (name) companyMap[name] = (companyMap[name] || 0) + 1;
         });
-
-        const topCompanies = Object.entries(companyCounts)
-            .sort((a, b) => b[1] - a[1])
+    
+        const topCompanies = Object.entries(companyMap)
+            .sort(function(a, b) { return b[1] - a[1]; })
             .slice(0, 4);
-
+    
         const companyContainer = document.getElementById('top-companies-chart');
-        if (companyContainer) {
+        if (companyContainer && topCompanies.length > 0) {
             const maxVal = topCompanies[0][1];
-            companyContainer.innerHTML = topCompanies.map(([name, count]) => {
+            companyContainer.innerHTML = topCompanies.map(function(entry) {
+                const name = entry[0];
+                const count = entry[1];
                 const percent = (count / maxVal) * 100;
                 return `
                 <div class="mb-4">
@@ -174,19 +176,28 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>`;
             }).join('');
         }
-
-        const websiteCounts = {};
-        cachedData.forEach(t => { websiteCounts[t.sourceWebsite] = (websiteCounts[t.sourceWebsite] || 0) + 1; });
-        const topWebsites = Object.entries(websiteCounts).sort((a, b) => b[1] - a[1]).slice(0, 4);
-
+    
+        const siteMap = {};
+        cachedData.forEach(function(t) {
+            const site = t.sourceWebsite;
+            if (site && site !== 'Unknown') {
+                siteMap[site] = (siteMap[site] || 0) + 1;
+            }
+        });
+    
+        const topWebsites = Object.entries(siteMap)
+            .sort(function(a, b) { return b[1] - a[1]; })
+            .slice(0, 4);
+    
         const catContainer = document.getElementById('categories-list');
         if (catContainer) {
-            catContainer.innerHTML = topWebsites.map(([website, count]) => `
+            catContainer.innerHTML = topWebsites.map(function(entry) {
+                return `
                 <div class="flex items-center justify-between p-3 rounded-lg border border-border-subtle bg-surface-inset/20">
-                    <span class="text-sm font-medium text-text-secondary">${website}</span>
-                    <span class="text-xs font-bold text-text-primary">${count}</span>
-                </div>
-            `).join('');
+                    <span class="text-sm font-medium text-text-secondary">${entry[0]}</span>
+                    <span class="text-xs font-bold text-text-primary">${entry[1]}</span>
+                </div>`;
+            }).join('');
         }
     }
 
@@ -204,22 +215,37 @@ document.addEventListener('DOMContentLoaded', () => {
             aiTitle.textContent = "Processing...";
             aiDesc.textContent = "Aggregating tracker data to infer profile...";
 
-            // Prepare Data for AI
-            const companyCounts = {};
-            cachedData.forEach(t => {
-                const name = t.company || t.domain;
-                companyCounts[name] = (companyCounts[name] || 0) + 1;
-            });
-            const topCos = Object.entries(companyCounts).sort((a,b) => b[1]-a[1]).slice(0,5).map(([name, count]) => ({ name, count }));
-
-            const websiteCounts = {};
-            cachedData.forEach(t => { websiteCounts[t.sourceWebsite] = (websiteCounts[t.sourceWebsite] || 0) + 1; });
-            const categories = Object.entries(websiteCounts).map(([label, count]) => ({ label, percent: Math.round((count/cachedData.length)*100) }));
-
-            const recent = cachedData.slice(0,5).map(t => ({ site: t.domain, status: 'Blocked' }));
-
             try {
-                const resultText = await analyzePrivacyFootprint(topCos, categories, recent);
+                // Build company counts from ALL events, using domain as fallback
+                const companyMap = {};
+                cachedData.forEach(function(t) {
+                    const name = (t.company && t.company !== 'Unknown') ? t.company : t.domain;
+                    if (name) companyMap[name] = (companyMap[name] || 0) + 1;
+                });
+                const allCompanies = Object.entries(companyMap)
+                    .sort(function(a, b) { return b[1] - a[1]; })
+                    .map(function(entry) { return { name: entry[0], count: entry[1] }; });
+
+                // Build website counts from ALL events
+                const siteMap = {};
+                const totalEvents = cachedData.length;
+                cachedData.forEach(function(t) {
+                    const site = t.sourceWebsite;
+                    if (site && site !== 'Unknown') {
+                        siteMap[site] = (siteMap[site] || 0) + 1;
+                    }
+                });
+                const allSites = Object.entries(siteMap)
+                    .sort(function(a, b) { return b[1] - a[1]; })
+                    .map(function(entry) {
+                        return { label: entry[0], percent: Math.round((entry[1] / totalEvents) * 100) };
+                    });
+
+                const recent = cachedData.slice(0, 5).map(function(t) {
+                    return { site: t.domain, status: 'Blocked' };
+                });
+
+                const resultText = await analyzePrivacyFootprint(allCompanies, allSites, recent);
                 aiTitle.textContent = "Digital Persona Generated";
                 aiDesc.innerHTML = resultText.replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
                 aiBtn.textContent = "Regenerate";
@@ -227,7 +253,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch (err) {
                 console.error(err);
                 aiTitle.textContent = "Analysis Failed";
-                aiDesc.textContent = "Could not connect to AI service.";
+                aiDesc.textContent = err.message || "Unknown error.";
                 aiBtn.disabled = false;
                 aiBtn.textContent = "Retry";
             }

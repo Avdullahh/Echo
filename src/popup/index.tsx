@@ -3,23 +3,53 @@ import { createRoot } from 'react-dom/client';
 import '../index.css'; 
 import { ExtensionPopup } from './components/ExtensionPopup'; 
 import { TrackerEvent } from '../shared/types';
+import { analyzeDigitalProfile } from '../shared/services/profileAnalyzer';
 
+// AFTER
 const PopupApp = () => {
-  // CHANGE 1: Start with null to represent "Loading"
   const [isProtectionOn, setProtectionOn] = useState<boolean | null>(null);
   const [realTrackers, setRealTrackers] = useState<TrackerEvent[]>([]);
   const [blockedCount, setBlockedCount] = useState(0);
+  const [persona, setPersona] = useState<string>('');
+  const [confidenceScore, setConfidenceScore] = useState<number>(0);
 
   useEffect(() => {
     if (typeof chrome !== 'undefined' && chrome.storage) {
       chrome.storage.local.get(['detectedTrackers', 'trackersBlocked', 'isProtectionOn'], (result) => {
-        setRealTrackers(result.detectedTrackers || []);
+        const trackers = result.detectedTrackers || [];
+        setRealTrackers(trackers);
         setBlockedCount(result.trackersBlocked || 0);
-        // CHANGE 2: If undefined, default to true, otherwise use saved value
         setProtectionOn(result.isProtectionOn !== undefined ? result.isProtectionOn : true);
+
+        // Derive persona from real tracker data
+        if (trackers.length > 0) {
+          const companyCounts: Record<string, number> = {};
+          const sourceCounts: Record<string, number> = {};
+          trackers.forEach((e: TrackerEvent) => {
+            const name = e.company || e.domain || 'Unknown';
+            companyCounts[name] = (companyCounts[name] || 0) + 1;
+            const site = e.sourceWebsite || 'unknown';
+            sourceCounts[site] = (sourceCounts[site] || 0) + 1;
+          });
+          const total = trackers.length;
+          const allCompanies = Object.entries(companyCounts)
+          .sort((a, b) => b[1] - a[1])
+          .map(([name, count]) => ({ name, count: count as number }));
+          const allWebsites = Object.entries(sourceCounts)
+          .sort((a, b) => (b[1] as number) - (a[1] as number))
+          .map(([label, count]) => ({
+            label,
+            percent: Math.round(((count as number) / total) * 100)
+          }));
+          
+          const markdown = analyzeDigitalProfile(allCompanies, allWebsites);
+          const titleMatch = markdown.match(/\*\*(.+?)\*\*/);
+          setPersona(titleMatch ? titleMatch[1] : 'Active Browser');
+          setConfidenceScore(Math.min(100, Math.round((trackers.length / 80) * 60 + (allWebsites.length / 15) * 40)));
+        }
       });
     } else {
-        setProtectionOn(true); // Fallback for dev mode
+        setProtectionOn(true);
     }
   }, []);
 
@@ -35,12 +65,14 @@ const PopupApp = () => {
   if (isProtectionOn === null) return null; 
 
   return (
-    <div className="w-[300px] h-[550px] bg-bg-canvas text-text-primary overflow-y-auto border border-border-subtle shadow-2xl">
+    <div className="w-[350px] h-[550px] bg-bg-canvas text-text-primary overflow-y-auto border border-border-subtle shadow-2xl">
       <ExtensionPopup 
         trackers={realTrackers}
         blockedCount={blockedCount}
         isProtectionOn={isProtectionOn}
         setProtectionOn={handleToggle}
+        persona={persona}
+        confidenceScore={confidenceScore}
         onOpenDashboard={(tab) => {
             const targetUrl = `dashboard.html#${tab}`;
             if (typeof chrome !== 'undefined' && chrome.tabs) {

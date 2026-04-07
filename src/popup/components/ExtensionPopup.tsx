@@ -9,6 +9,8 @@ interface ExtensionPopupProps {
   isProtectionOn: boolean | null;
   setProtectionOn: (val: boolean) => void;
   onOpenDashboard: (tab: DashboardTab) => void;
+  persona?: string;           
+  confidenceScore?: number; 
 }
 
 export const ExtensionPopup: React.FC<ExtensionPopupProps> = ({
@@ -17,6 +19,8 @@ export const ExtensionPopup: React.FC<ExtensionPopupProps> = ({
   isProtectionOn,
   setProtectionOn,
   onOpenDashboard,
+  persona = '',           
+  confidenceScore = 0,    
 }) => {
   const [explanation, setExplanation] = useState<AdExplanation | null>(null);
   const [showExplanation, setShowExplanation] = useState(false);
@@ -120,6 +124,30 @@ export const ExtensionPopup: React.FC<ExtensionPopupProps> = ({
           </p>
         </div>
       </div>
+
+      {/* MINI PERSONA CARD */}
+      {persona && (
+        <div className="mx-3 mb-3">
+          <button
+            onClick={() => onOpenDashboard('overview')}
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl bg-surface-card border border-border-subtle hover:border-accent-primary/50 transition-colors text-left"
+          >
+            <div className="w-8 h-8 rounded-full bg-accent-primary/10 border border-accent-primary/30 flex items-center justify-center shrink-0">
+              <span className="text-sm">🧠</span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-[11px] font-semibold text-text-primary truncate">{persona}</div>
+              <div className="text-[10px] text-text-muted">
+                Algorithms see you as this — tap to explore
+              </div>
+            </div>
+            <div className="text-right shrink-0">
+              <div className="text-sm font-bold text-accent-primary">{confidenceScore}%</div>
+              <div className="text-[9px] text-text-muted uppercase tracking-wide">Confidence</div>
+            </div>
+          </button>
+        </div>
+      )}
 
       {/* FR4 — AD EXPLANATION PANEL */}
       {isProtectionOn && (
