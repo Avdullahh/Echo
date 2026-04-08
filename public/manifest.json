@@ -59,7 +59,7 @@
     }
   ],
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self'; connect-src 'self' https://generativelanguage.googleapis.com http://localhost:3000"
+    "extension_pages": "script-src 'self'; object-src 'self'; connect-src 'self' http://localhost:3000"
   },
   "background": {
     "service_worker": "assets/background.js",

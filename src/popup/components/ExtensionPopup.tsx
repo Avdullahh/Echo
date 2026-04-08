@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Power, Settings, Home, LayoutDashboard, FileText, Info, X } from 'lucide-react';
+import { Power, Settings, Home, LayoutDashboard, FileText, Info, X, ShieldOff, ShieldCheck } from 'lucide-react';
 import { TrackerEvent, DashboardTab } from '../../shared/types';
 import { explainAds, AdExplanation } from '../../shared/services/adExplainer';
 
@@ -9,8 +9,8 @@ interface ExtensionPopupProps {
   isProtectionOn: boolean | null;
   setProtectionOn: (val: boolean) => void;
   onOpenDashboard: (tab: DashboardTab) => void;
-  persona?: string;           
-  confidenceScore?: number; 
+  persona?: string;
+  confidenceScore?: number;
 }
 
 export const ExtensionPopup: React.FC<ExtensionPopupProps> = ({
@@ -19,32 +19,67 @@ export const ExtensionPopup: React.FC<ExtensionPopupProps> = ({
   isProtectionOn,
   setProtectionOn,
   onOpenDashboard,
-  persona = '',           
-  confidenceScore = 0,    
+  persona = '',
+  confidenceScore = 0,
 }) => {
   const [explanation, setExplanation] = useState<AdExplanation | null>(null);
   const [showExplanation, setShowExplanation] = useState(false);
+  const [currentHost, setCurrentHost] = useState<string>('');
+  const [isSiteAllowlisted, setIsSiteAllowlisted] = useState(false);
+  const [allowlistLoading, setAllowlistLoading] = useState(false);
 
+  // Resolve current tab hostname and check allowlist status
   useEffect(() => {
-    if (trackers.length === 0) return;
+    if (typeof chrome === 'undefined' || !chrome.tabs) return;
 
-    if (typeof chrome === 'undefined' || !chrome.tabs) {
-      const host = trackers[0].sourceWebsite || 'unknown';
-      setExplanation(explainAds(trackers, host));
-      return;
-    }
-
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
       const url = tabs[0]?.url;
       if (!url) return;
+
       try {
         const host = new URL(url).hostname;
-        setExplanation(explainAds(trackers, host));
+        setCurrentHost(host);
+
+        // Check if this site is already allowlisted
+        const result = await chrome.storage.local.get(['allowlistedSites']);
+        const sites: string[] = result.allowlistedSites || [];
+        setIsSiteAllowlisted(sites.includes(host));
+
+        // Also set explanation
+        if (trackers.length > 0) {
+          setExplanation(explainAds(trackers, host));
+        }
       } catch {
         // ignore chrome:// etc
       }
     });
   }, [trackers]);
+
+  // Fallback for dev mode
+  useEffect(() => {
+    if (typeof chrome !== 'undefined' && chrome.tabs) return;
+    if (trackers.length === 0) return;
+    const host = trackers[0].sourceWebsite || 'unknown';
+    setExplanation(explainAds(trackers, host));
+  }, [trackers]);
+
+  const handleAllowlistToggle = async () => {
+    if (!currentHost || allowlistLoading) return;
+    setAllowlistLoading(true);
+
+    try {
+      // Send message to background to handle the rule change
+      await chrome.runtime.sendMessage({
+        type: isSiteAllowlisted ? 'REMOVE_ALLOWLIST' : 'ADD_ALLOWLIST',
+        hostname: currentHost,
+      });
+      setIsSiteAllowlisted(!isSiteAllowlisted);
+    } catch (err) {
+      console.error('Echo: Allowlist toggle failed', err);
+    } finally {
+      setAllowlistLoading(false);
+    }
+  };
 
   const NavItem = ({
     icon: Icon,
@@ -93,7 +128,7 @@ export const ExtensionPopup: React.FC<ExtensionPopupProps> = ({
       </div>
 
       {/* POWER BUTTON AREA */}
-      <div className="relative z-10 flex flex-col items-center justify-center py-8">
+      <div className="relative z-10 flex flex-col items-center justify-center py-6">
         <button
           onClick={() => setProtectionOn(!isProtectionOn)}
           className="group relative focus:outline-none focus-visible:ring-4 focus-visible:ring-accent-primary/30 rounded-full z-10"
@@ -125,6 +160,39 @@ export const ExtensionPopup: React.FC<ExtensionPopupProps> = ({
         </div>
       </div>
 
+      {/* PER-SITE ALLOWLIST BUTTON */}
+      {isProtectionOn && currentHost && (
+        <div className="mx-3 mb-3">
+          <button
+            onClick={handleAllowlistToggle}
+            disabled={allowlistLoading}
+            className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl border transition-all duration-200 text-left
+              ${isSiteAllowlisted
+                ? 'bg-amber-500/10 border-amber-500/40 hover:border-amber-500/70'
+                : 'bg-surface-card border-border-subtle hover:border-border-strong'
+              }`}
+          >
+            {isSiteAllowlisted
+              ? <ShieldOff className="w-4 h-4 text-amber-400 shrink-0" />
+              : <ShieldCheck className="w-4 h-4 text-text-muted shrink-0" />
+            }
+            <div className="flex-1 min-w-0">
+              <div className={`text-[11px] font-semibold truncate
+                ${isSiteAllowlisted ? 'text-amber-400' : 'text-text-primary'}`}>
+                {isSiteAllowlisted
+                  ? `Echo paused on ${currentHost}`
+                  : `Pause Echo on ${currentHost}`}
+              </div>
+              <div className="text-[10px] text-text-muted">
+                {isSiteAllowlisted
+                  ? 'Tap to resume protection on this site'
+                  : 'Trust this site — stop blocking its trackers'}
+              </div>
+            </div>
+          </button>
+        </div>
+      )}
+
       {/* MINI PERSONA CARD */}
       {persona && (
         <div className="mx-3 mb-3">
@@ -153,7 +221,6 @@ export const ExtensionPopup: React.FC<ExtensionPopupProps> = ({
       {isProtectionOn && (
         <div className="relative z-20 mx-3 mb-3">
 
-          {/* Collapsed teaser */}
           {explanation && !showExplanation && (
             <button
               onClick={() => setShowExplanation(true)}
@@ -169,7 +236,6 @@ export const ExtensionPopup: React.FC<ExtensionPopupProps> = ({
             </button>
           )}
 
-          {/* Expanded card */}
           {explanation && showExplanation && (
             <div className="rounded-xl bg-surface-card border border-accent-primary/30 p-3 space-y-2">
               <div className="flex items-center justify-between">
@@ -214,7 +280,6 @@ export const ExtensionPopup: React.FC<ExtensionPopupProps> = ({
             </div>
           )}
 
-          {/* No data nudge */}
           {!explanation && trackers.length === 0 && (
             <div className="px-3 py-2 rounded-xl bg-surface-card border border-border-subtle">
               <p className="text-[11px] text-text-muted text-center leading-tight">
