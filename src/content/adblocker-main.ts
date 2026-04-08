@@ -15,6 +15,7 @@
     if (event.source !== window) return;
     if (event.data?.type === 'ECHO_ENABLE_BLOCKING') {
       blockingEnabled = true;
+      bypassAlternateContentDetection(); 
       console.log('[Echo AdBlock] MAIN: Blocking enabled via message');
     }
     if (event.data?.type === 'ECHO_DISABLE_BLOCKING') {
@@ -133,6 +134,21 @@
       });
     } catch (e) {}
   }
+
+  // Neutralise Google Analytics execution
+  (window as any).ga = function() {};
+  (window as any).gtag = function() {};
+  (window as any).__ga_disable = true;
+  (window as any)[`ga-disable-UA-XXXXX-Y`] = true;
+
+  // Neutralise Sentry execution  
+  (window as any).Sentry = {
+    init: function() {},
+    captureException: function() {},
+    captureMessage: function() {},
+    configureScope: function() {},
+    withScope: function() {},
+  };
 
   (window as any).BlockAdBlock = function() {
     this.onDetected = function() { return this; };
@@ -262,8 +278,50 @@
     }
   }, true);
 
+
   // ===========================================
-  // 9. MAIN EXECUTION
+  // 9. ALTERNATE CONTENT BYPASS
+  // ===========================================
+  function bypassAlternateContentDetection(): void {
+    if (!blockingEnabled) return;
+
+    const adClassPatterns = [
+      'ad-widget', 'adbox', 'adsbox', 'ad-container',
+      'advertisement', 'adsbygoogle', 'banner_ads',
+      'ad-placeholder', 'ad-slot', 'ad-unit'
+    ];
+
+    // Override offsetHeight/offsetWidth for known ad containers
+    // so detection scripts think the ad loaded normally
+    const observer = new MutationObserver(() => {
+      adClassPatterns.forEach(pattern => {
+        document.querySelectorAll(`[class*="${pattern}"]`).forEach(el => {
+          const htmlEl = el as HTMLElement;
+          if (getComputedStyle(htmlEl).display === 'none') {
+            // Make the element report non-zero dimensions
+            Object.defineProperty(htmlEl, 'offsetHeight', {
+              get: () => 1,
+              configurable: true
+            });
+            Object.defineProperty(htmlEl, 'offsetWidth', {
+              get: () => 1,
+              configurable: true
+            });
+          }
+        });
+      });
+    });
+
+  if (document.body) {
+    observer.observe(document.body, { childList: true, subtree: true });
+  } else {
+    document.addEventListener('DOMContentLoaded', () => {
+      observer.observe(document.body, { childList: true, subtree: true });
+    });
+  }
+}
+  // ===========================================
+  // 10. MAIN EXECUTION
   // ===========================================
   function runBlockers(): void {
     if (!blockingEnabled) return;

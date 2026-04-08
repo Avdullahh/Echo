@@ -368,3 +368,134 @@ app.get('/api/adblock/refresh', async (req, res) => {
 app.listen(PORT, () => {
   console.log(`🚀 Echo Backend running at http://localhost:${PORT}`);
 });
+
+app.post('/api/seed/turtlecute', async (req, res) => {
+  console.log("🐢 Seeding Turtlecute missing domains...");
+
+  const missingDomains = [
+    // Amazon ad/analytics
+    { domain: 'adtago.s3.amazonaws.com',           owner: 'Amazon',    category: 'Advertising' },
+    { domain: 'analyticsengine.s3.amazonaws.com',  owner: 'Amazon',    category: 'Analytics'   },
+    { domain: 'analytics.s3.amazonaws.com',        owner: 'Amazon',    category: 'Analytics'   },
+    { domain: 'advice-ads.s3.amazonaws.com',       owner: 'Amazon',    category: 'Advertising' },
+    // Google
+    { domain: 'pagead2.googlesyndication.com',     owner: 'Google',    category: 'Advertising' },
+    { domain: 'afs.googlesyndication.com',         owner: 'Google',    category: 'Advertising' },
+    { domain: 'click.googleanalytics.com',         owner: 'Google',    category: 'Analytics'   },
+    { domain: 'analytics.google.com',              owner: 'Google',    category: 'Analytics'   },
+    // Meta
+    { domain: 'an.facebook.com',                   owner: 'Meta',      category: 'Advertising' },
+    { domain: 'pixel.facebook.com',                owner: 'Meta',      category: 'Analytics'   },
+    // FreshWorks
+    { domain: 'freshmarketer.com',                 owner: 'Freshworks', category: 'Analytics'  },
+    // MouseFlow
+    { domain: 'mouseflow.com',                     owner: 'Mouseflow', category: 'Analytics'   },
+    // Reddit
+    { domain: 'events.reddit.com',                 owner: 'Reddit',    category: 'Analytics'   },
+    { domain: 'events.redditmedia.com',            owner: 'Reddit',    category: 'Analytics'   },
+    // Pinterest
+    { domain: 'log.pinterest.com',                 owner: 'Pinterest', category: 'Analytics'   },
+    { domain: 'ads.pinterest.com',                 owner: 'Pinterest', category: 'Advertising' },
+    { domain: 'trk.pinterest.com',                 owner: 'Pinterest', category: 'Analytics'   },
+    // TikTok
+    { domain: 'analytics.tiktok.com',             owner: 'TikTok',    category: 'Analytics'   },
+    { domain: 'analytics-sg.tiktok.com',          owner: 'TikTok',    category: 'Analytics'   },
+    { domain: 'ads-api.tiktok.com',               owner: 'TikTok',    category: 'Advertising' },
+    { domain: 'ads-api.twitter.com',              owner: 'X',         category: 'Advertising' },
+    { domain: 'ads.tiktok.com',                   owner: 'TikTok',    category: 'Advertising' },
+    { domain: 'business-api.tiktok.com',          owner: 'TikTok',    category: 'Advertising' },
+    { domain: 'log.byteoversea.com',              owner: 'TikTok',    category: 'Analytics'   },
+    { domain: 'ads-sg.tiktok.com',               owner: 'TikTok',    category: 'Advertising' },
+    // Yahoo
+    { domain: 'log.fc.yahoo.com',                 owner: 'Yahoo',     category: 'Analytics'   },
+    { domain: 'udcm.yahoo.com',                   owner: 'Yahoo',     category: 'Analytics'   },
+    { domain: 'analytics.query.yahoo.com',        owner: 'Yahoo',     category: 'Analytics'   },
+    { domain: 'geo.yahoo.com',                    owner: 'Yahoo',     category: 'Analytics'   },
+    { domain: 'gemini.yahoo.com',                 owner: 'Yahoo',     category: 'Advertising' },
+    { domain: 'adtech.yahooinc.com',             owner: 'Yahoo',     category: 'Advertising' },
+    { domain: 'partnerads.ysm.yahoo.com',        owner: 'Yahoo',     category: 'Advertising' },
+    { domain: 'analytics.yahoo.com',             owner: 'Yahoo',     category: 'Analytics'   },
+    // Unity Ads
+    { domain: 'auction.unityads.unity3d.com',    owner: 'Unity',     category: 'Advertising' },
+    { domain: 'config.unityads.unity3d.com',     owner: 'Unity',     category: 'Advertising' },
+    { domain: 'webview.unityads.unity3d.com',    owner: 'Unity',     category: 'Advertising' },
+    // Yandex
+    { domain: 'adfstat.yandex.ru',              owner: 'Yandex',    category: 'Advertising' },
+    { domain: 'appmetrica.yandex.ru',           owner: 'Yandex',    category: 'Analytics'   },
+    { domain: 'metrika.yandex.ru',              owner: 'Yandex',    category: 'Analytics'   },
+    { domain: 'adfox.yandex.ru',               owner: 'Yandex',    category: 'Advertising' },
+    // Realme / OPPO
+    { domain: 'iot-eu-logser.realme.com',       owner: 'Realme',    category: 'Analytics'   },
+    { domain: 'bdapi-in-ads.realmemobile.com',  owner: 'Realme',    category: 'Advertising' },
+    { domain: 'bdapi-ads.realmemobile.com',     owner: 'Realme',    category: 'Advertising' },
+    { domain: 'iot-logser.realme.com',          owner: 'Realme',    category: 'Analytics'   },
+    { domain: 'data.ads.oppomobile.com',        owner: 'OPPO',      category: 'Advertising' },
+    { domain: 'adx.ads.oppomobile.com',         owner: 'OPPO',      category: 'Advertising' },
+    { domain: 'adsfs.oppomobile.com',           owner: 'OPPO',      category: 'Advertising' },
+    { domain: 'ck.ads.oppomobile.com',          owner: 'OPPO',      category: 'Advertising' },
+    // Samsung
+    { domain: 'analytics-api.samsunghealthcn.com', owner: 'Samsung', category: 'Analytics'  },
+    { domain: 'samsungads.com',                 owner: 'Samsung',   category: 'Advertising' },
+    { domain: 'smetrics.samsung.com',           owner: 'Samsung',   category: 'Analytics'   },
+    // Apple
+    { domain: 'notes-analytics-events.apple.com',   owner: 'Apple', category: 'Analytics'   },
+    { domain: 'weather-analytics-events.apple.com', owner: 'Apple', category: 'Analytics'   },
+    { domain: 'books-analytics-events.apple.com',   owner: 'Apple', category: 'Analytics'   },
+    { domain: 'api-adservices.apple.com',        owner: 'Apple',    category: 'Advertising' },
+    { domain: 'iadsdk.apple.com',               owner: 'Apple',    category: 'Advertising' },
+    { domain: 'metrics.icloud.com',             owner: 'Apple',    category: 'Analytics'   },
+    { domain: 'metrics.mzstatic.com',           owner: 'Apple',    category: 'Analytics'   },
+    // Xiaomi
+    { domain: 'data.mistat.xiaomi.com',         owner: 'Xiaomi',   category: 'Analytics'   },
+    { domain: 'data.mistat.rus.xiaomi.com',     owner: 'Xiaomi',   category: 'Analytics'   },
+    { domain: 'data.mistat.india.xiaomi.com',   owner: 'Xiaomi',   category: 'Analytics'   },
+    { domain: 'tracking.rus.miui.com',          owner: 'Xiaomi',   category: 'Analytics'   },
+    // Hicloud (Huawei)
+    { domain: 'logbak.hicloud.com',             owner: 'Huawei',   category: 'Analytics'   },
+    { domain: 'grs.hicloud.com',                owner: 'Huawei',   category: 'Analytics'   },
+    { domain: 'logservice.hicloud.com',         owner: 'Huawei',   category: 'Analytics'   },
+    { domain: 'logservice1.hicloud.com',        owner: 'Huawei',   category: 'Analytics'   },
+    // LinkedIn
+    { domain: 'analytics.pointdrive.linkedin.com', owner: 'LinkedIn', category: 'Analytics' },
+    // Extras
+    { domain: 'mc.yandex.ru',               owner: 'Yandex',        category: 'Analytics'   },
+    { domain: 'browser.sentry-cdn.com',     owner: 'Sentry',        category: 'Analytics'   },
+    { domain: 'app.getsentry.com',          owner: 'Sentry',        category: 'Analytics'   },
+    { domain: 'notify.bugsnag.com',         owner: 'Bugsnag',       category: 'Analytics'   },
+    { domain: 'sessions.bugsnag.com',       owner: 'Bugsnag',       category: 'Analytics'   },
+    { domain: 'api.bugsnag.com',            owner: 'Bugsnag',       category: 'Analytics'   },
+    { domain: 'app.bugsnag.com',            owner: 'Bugsnag',       category: 'Analytics'   },
+    { domain: 'static.ads-twitter.com',     owner: 'X',             category: 'Advertising' },
+    { domain: 'ads.linkedin.com',           owner: 'LinkedIn',      category: 'Advertising' },
+    { domain: 'ads.youtube.com',            owner: 'Google',        category: 'Advertising' },
+    { domain: 'ads.yahoo.com',              owner: 'Yahoo',         category: 'Advertising' },
+  ];
+
+  try {
+    // Get current max ID to avoid collisions
+    const lastTracker = await Tracker.findOne({}).sort({ id: -1 });
+    let nextId = lastTracker ? lastTracker.id + 1 : 1;
+
+    // Only insert domains that don't already exist
+    const existingDomains = new Set(
+      (await Tracker.find({}, 'domain')).map(t => t.domain)
+    );
+
+    const toInsert = missingDomains
+      .filter(d => !existingDomains.has(d.domain))
+      .map(d => ({ ...d, id: nextId++, risk: 'WARNING' }));
+
+    if (toInsert.length === 0) {
+      return res.json({ message: "All domains already exist", added: 0 });
+    }
+
+    await Tracker.insertMany(toInsert);
+    console.log(`💾 Added ${toInsert.length} missing domains from Turtlecute list.`);
+    res.json({ message: "Success", added: toInsert.length });
+
+  } catch (error) {
+    console.error("❌ Turtlecute seed failed:", error.message);
+    res.status(500).json({ error: "Seed failed: " + error.message });
+  }
+});
+
