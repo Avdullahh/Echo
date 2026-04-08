@@ -117,3 +117,35 @@ chrome.declarativeNetRequest.onRuleMatchedDebug.addListener(async (info) => {
 
   await logTrackerEvent(event);
 });
+
+chrome.declarativeNetRequest.onRuleMatchedDebug.addListener(async (info) => {
+  const match = info.request;
+  const domain = new URL(match.url).hostname;
+
+  if (isDuplicate(domain)) return;
+
+  const store = await chrome.storage.local.get(['trackerMetadata']);
+  const meta = store.trackerMetadata?.[domain] ?? null;
+
+  let sourceWebsite = 'Unknown';
+  try {
+    if (match.initiator) sourceWebsite = new URL(match.initiator).hostname;
+  } catch {
+    sourceWebsite = 'Unknown';
+  }
+
+  // Check if this was matched by an allowlist rule (ID >= 480000)
+  const isAllowlisted = info.rule.ruleId >= 480000;
+
+  const event: TrackerEvent = {
+    id: Date.now(),
+    domain,
+    sourceWebsite,
+    company: meta?.owner ?? 'Unknown',
+    riskLevel: isAllowlisted ? RiskLevel.SAFE : RiskLevel.WARNING,
+    action: isAllowlisted ? 'Allowed' : 'Blocked',
+    timestamp: new Date().toISOString(),
+  };
+
+  await logTrackerEvent(event);
+});

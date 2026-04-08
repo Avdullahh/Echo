@@ -45,3 +45,14 @@ export async function clearTrackerEvents(): Promise<void> {
     trackersBlocked: 0,
   });
 }
+
+export async function logAllowedEvent(event: TrackerEvent): Promise<void> {
+  const result = await chrome.storage.local.get(['detectedTrackers']);
+  let events: TrackerEvent[] = result.detectedTrackers || [];
+
+  // Mark as allowed/bypassed — don't increment the blocked count
+  events.unshift(event);
+  if (events.length > MAX_EVENTS) events = events.slice(0, MAX_EVENTS);
+
+  await chrome.storage.local.set({ detectedTrackers: events });
+}

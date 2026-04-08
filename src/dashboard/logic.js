@@ -89,33 +89,34 @@ document.addEventListener('DOMContentLoaded', () => {
         const emptyState = document.getElementById('empty-state-traffic');
         
         if (!tableBody) return;
-
+    
         if (list.length === 0) {
             tableBody.innerHTML = '';
             if(emptyState) emptyState.classList.remove('hidden');
             return;
         }
         if(emptyState) emptyState.classList.add('hidden');
-
-        // CHANGE: Group by Domain/Company
+    
         const grouped = list.reduce((acc, t) => {
             const key = t.company && t.company !== 'Unknown' ? t.company : t.domain;
             if (!acc[key]) {
                 acc[key] = { ...t, count: 0, lastSeen: t.timestamp };
             }
             acc[key].count++;
-            // Keep most recent timestamp
             if (new Date(t.timestamp) > new Date(acc[key].lastSeen)) {
                 acc[key].lastSeen = t.timestamp;
             }
             return acc;
         }, {});
-
+    
         const sorted = Object.values(grouped).sort((a, b) => new Date(b.lastSeen) - new Date(a.lastSeen));
-
+    
         tableBody.innerHTML = sorted.map(t => {
             const displayOwner = t.company && t.company !== 'Unknown' ? t.company : t.domain;
-            
+            const actionBadge = t.action === 'Allowed'
+                ? `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">Bypassed</span>`
+                : `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-accent-critical/10 text-accent-critical border border-accent-critical/20">Blocked</span>`;
+    
             return `
             <tr class="hover:bg-surface-cardHover/50 transition-colors group">
                 <td class="px-6 py-4">
@@ -125,20 +126,24 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                         <div>
                             <div class="text-sm font-medium text-text-primary">${displayOwner}</div>
-                            <div class="text-xs text-text-muted">${t.count} attempts blocked</div>
+                            <div class="text-xs text-text-muted flex items-center gap-1.5">
+                                ${actionBadge}
+                                <span>${t.count} request${t.count !== 1 ? 's' : ''}</span>
+                            </div>
                         </div>
                     </div>
                 </td>
                 <td class="px-6 py-4">
                     <span class="px-2 py-1 rounded text-[10px] font-medium tracking-wide bg-surface-inset text-text-secondary border border-border-subtle">
-                        ${t.sourceWebsite}
+                        ${t.sourceWebsite && t.sourceWebsite !== 'Unknown' ? t.sourceWebsite : 'Direct request'}
                     </span>
                 </td>
                 <td class="px-6 py-4 text-right text-xs text-text-muted tabular-nums">
                     ${new Date(t.lastSeen).toLocaleTimeString()}
                 </td>
             </tr>
-        `}).join('');
+            `;
+        }).join('');
     }
 
     // --- 4. REPORTS ENGINE ---

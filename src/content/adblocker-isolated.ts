@@ -189,6 +189,15 @@ function hideAdsInShadowDOM(): void {
 }
 
 // ---------------------------------------------------------------------------
+// Send signal to MAIN world script
+// ---------------------------------------------------------------------------
+function signalMainWorld(enabled: boolean): void {
+  window.postMessage({
+    type: enabled ? 'ECHO_ENABLE_BLOCKING' : 'ECHO_DISABLE_BLOCKING'
+  }, '*');
+}
+
+// ---------------------------------------------------------------------------
 // Enable / disable blocking
 // ---------------------------------------------------------------------------
 function enableBlocking(): void {
@@ -197,14 +206,15 @@ function enableBlocking(): void {
   loadGeneratedCSS().catch(() => {});
   applyDomainRules().catch(() => {});
   hideAdsInShadowDOM();
+  signalMainWorld(true);
   console.log('[Echo AdBlock] Blocking enabled');
 }
 
 function disableBlocking(): void {
   isEnabled = false;
   removeStyles();
-  // Also remove shadow DOM styles
   document.querySelectorAll('#echo-shadow-styles').forEach(el => el.remove());
+  signalMainWorld(false);
   console.log('[Echo AdBlock] Blocking disabled');
 }
 
@@ -212,35 +222,57 @@ function disableBlocking(): void {
 // Initialisation — single entry point, single storage check
 // ---------------------------------------------------------------------------
 function init(): void {
-  // Check BOTH protection and ad blocking state before doing anything
-  chrome.storage.local.get(['isProtectionOn', 'isAdBlockingOn'], (result) => {
-    const protectionOn = result.isProtectionOn !== false;
-    const adBlockingOn = result.isAdBlockingOn !== false;
+  chrome.storage.local.get(
+    ['isProtectionOn', 'isAdBlockingOn', 'allowlistedSites'],
+    (result) => {
+      const protectionOn = result.isProtectionOn !== false;
+      const adBlockingOn = result.isAdBlockingOn !== false;
+      const allowlistedSites: string[] = result.allowlistedSites || [];
+      const currentHost = window.location.hostname;
+      const isSiteAllowlisted = allowlistedSites.some(site =>
+        currentHost === site || currentHost.endsWith('.' + site)
+      );
 
-    if (protectionOn && adBlockingOn) {
-      enableBlocking();
-      if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', hideAdsInShadowDOM);
+      if (protectionOn && adBlockingOn && !isSiteAllowlisted) {
+        enableBlocking();
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', hideAdsInShadowDOM);
+        }
+        setInterval(hideAdsInShadowDOM, 2000);
+      } else {
+        const reason = !protectionOn ? 'protection off'
+          : !adBlockingOn ? 'ad blocking off'
+          : 'site is allowlisted';
+        console.log(`[Echo AdBlock] Disabled on init — ${reason}`);
+        signalMainWorld(false);
       }
-      setInterval(hideAdsInShadowDOM, 2000);
-    } else {
-      console.log('[Echo AdBlock] Disabled on init — protection or ad blocking is off');
     }
-  });
+  );
 
-  // Single unified storage listener — no duplicates
+  // Single unified storage listener
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area !== 'local') return;
-    if (!changes.isProtectionOn && !changes.isAdBlockingOn) return;
+    if (!changes.isProtectionOn && !changes.isAdBlockingOn && !changes.allowlistedSites) return;
 
-    chrome.storage.local.get(['isProtectionOn', 'isAdBlockingOn'], (result) => {
-      const shouldBlock = result.isProtectionOn !== false && result.isAdBlockingOn !== false;
-      if (shouldBlock) {
-        enableBlocking();
-      } else {
-        disableBlocking();
+    chrome.storage.local.get(
+      ['isProtectionOn', 'isAdBlockingOn', 'allowlistedSites'],
+      (result) => {
+        const protectionOn = result.isProtectionOn !== false;
+        const adBlockingOn = result.isAdBlockingOn !== false;
+        const allowlistedSites: string[] = result.allowlistedSites || [];
+        const currentHost = window.location.hostname;
+        const isSiteAllowlisted = allowlistedSites.some(site =>
+          currentHost === site || currentHost.endsWith('.' + site)
+        );
+
+        const shouldBlock = protectionOn && adBlockingOn && !isSiteAllowlisted;
+        if (shouldBlock) {
+          enableBlocking();
+        } else {
+          disableBlocking();
+        }
       }
-    });
+    );
   });
 }
 
