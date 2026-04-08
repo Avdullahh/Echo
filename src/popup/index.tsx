@@ -34,7 +34,13 @@ const PopupApp = () => {
   const handleToggle = (val: boolean) => {
     setProtectionOn(val);
     if (typeof chrome !== 'undefined' && chrome.storage) {
-      chrome.storage.local.set({ isProtectionOn: val });
+      chrome.storage.local.set({ isProtectionOn: val }, () => {
+        // Reload active tab so new rules take effect immediately
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+          const tabId = tabs[0]?.id;
+          if (tabId) chrome.tabs.reload(tabId);
+        });
+      });
     }
   };
 

@@ -1,160 +1,119 @@
 /**
- * tracker-engine.ts
- * Responsible solely for managing declarativeNetRequest blocking rules.
- * No event logging, no badge updates, no storage reads beyond isProtectionOn.
+ * background/index.ts
+ * Orchestrator only — wires together tracker-engine, event-logger,
+ * and badge-manager. Contains no business logic itself.
  */
 
-import { BlocklistRule } from '../shared/types';
+import { TrackerEvent, RiskLevel } from '../shared/types';
+import {
+  refreshBlocklist,
+  removeAllDynamicRules,
+  enableAdBlocking,
+  disableAdBlocking,
+  restoreAllowlistRules,
+  allowlistSite,
+  removeAllowlistedSite,
+} from './tracker-engine';
+import { isDuplicate, logTrackerEvent } from './event-logger';
+import { setBadgeOn, setBadgeOff } from './badge-manager';
 
-const API_ENDPOINT = 'http://localhost:3000/api/blocklist';
-const ALLOWLIST_RULE_ID_BASE = 480000;
+const UPDATE_ALARM = 'update-blocklist';
 
-export async function refreshBlocklist(): Promise<void> {
-  const store = await chrome.storage.local.get(['isProtectionOn']);
-  if (store.isProtectionOn === false) {
-    console.log('Echo TrackerEngine: Skipping update — protection is OFF.');
-    return;
+console.log('Echo: Background Engine Starting...');
+
+chrome.runtime.onInstalled.addListener(async () => {
+  await chrome.storage.local.set({
+    isProtectionOn: true,
+    isAdBlockingOn: true,
+    isCookieBannerBlockingOn: true,
+  });
+
+  await refreshBlocklist();
+  await restoreAllowlistRules();
+  chrome.alarms.create(UPDATE_ALARM, { periodInMinutes: 60 });
+  await enableAdBlocking();
+
+  console.log('Echo: Initialised. Ad blocking and cookie banner blocking active.');
+});
+
+chrome.alarms.onAlarm.addListener(async (alarm) => {
+  if (alarm.name === UPDATE_ALARM) await refreshBlocklist();
+});
+
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area !== 'local') return;
+
+  if (changes.isProtectionOn) {
+    const isOn = changes.isProtectionOn.newValue;
+    if (isOn) {
+      console.log('Echo: Protection Resumed.');
+      // Re-enable static ruleset first, then restore dynamic rules
+      enableAdBlocking().then(() => {
+        refreshBlocklist().then(() => restoreAllowlistRules());
+      });
+      setBadgeOn();
+    } else {
+      console.log('Echo: Protection Paused.');
+      // Remove dynamic rules AND disable static ruleset
+      removeAllDynamicRules();
+      disableAdBlocking();
+      setBadgeOff();
+    }
   }
 
+  if (changes.isAdBlockingOn) {
+    changes.isAdBlockingOn.newValue ? enableAdBlocking() : disableAdBlocking();
+  }
+
+  if (changes.isCookieBannerBlockingOn) {
+    const isEnabled = changes.isCookieBannerBlockingOn.newValue;
+    console.log(`Echo: Cookie Banner Blocking ${isEnabled ? 'Enabled' : 'Disabled'}.`);
+  }
+});
+
+chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  if (message.type === 'ADD_ALLOWLIST') {
+    allowlistSite(message.hostname)
+      .then(() => sendResponse({ success: true }))
+      .catch((err: Error) => sendResponse({ success: false, error: err.message }));
+    return true;
+  }
+
+  if (message.type === 'REMOVE_ALLOWLIST') {
+    removeAllowlistedSite(message.hostname)
+      .then(() => sendResponse({ success: true }))
+      .catch((err: Error) => sendResponse({ success: false, error: err.message }));
+    return true;
+  }
+});
+
+// NOTE: onRuleMatchedDebug only fires in unpacked extensions with Developer
+// Mode enabled. Expected for FYP evaluation — see report section 3.x.
+chrome.declarativeNetRequest.onRuleMatchedDebug.addListener(async (info) => {
+  const match = info.request;
+  const domain = new URL(match.url).hostname;
+
+  if (isDuplicate(domain)) return;
+
+  const store = await chrome.storage.local.get(['trackerMetadata']);
+  const meta = store.trackerMetadata?.[domain] ?? null;
+
+  let sourceWebsite = 'Unknown';
   try {
-    const response = await fetch(API_ENDPOINT);
-    if (!response.ok) throw new Error(`API Error: ${response.status}`);
-
-    const dbRules: BlocklistRule[] = await response.json();
-    console.log(`Echo TrackerEngine: Received ${dbRules.length} rules from backend.`);
-
-    const metadata: Record<string, { owner: string; category: string }> = {};
-
-    const dynamicRules = dbRules.map((rule) => {
-      metadata[rule.domain] = { owner: rule.owner, category: rule.category };
-      return {
-        id: rule.id,
-        priority: 1,
-        action: { type: chrome.declarativeNetRequest.RuleActionType.BLOCK },
-        condition: {
-          urlFilter: rule.domain,
-          resourceTypes: [
-            chrome.declarativeNetRequest.ResourceType.SCRIPT,
-            chrome.declarativeNetRequest.ResourceType.IMAGE,
-            chrome.declarativeNetRequest.ResourceType.XMLHTTPREQUEST,
-            chrome.declarativeNetRequest.ResourceType.PING,
-          ],
-        },
-      };
-    });
-
-    await chrome.declarativeNetRequest.updateDynamicRules({
-      removeRuleIds: dynamicRules.map(r => r.id),
-      addRules: dynamicRules,
-    });
-
-    await chrome.storage.local.set({ trackerMetadata: metadata });
-    console.log('Echo TrackerEngine: Dynamic rules active.');
-
-  } catch (error) {
-    console.warn('Echo TrackerEngine: Backend unavailable, using cached rules.', error);
+    if (match.initiator) sourceWebsite = new URL(match.initiator).hostname;
+  } catch {
+    sourceWebsite = 'Unknown';
   }
-}
 
-export async function removeAllDynamicRules(): Promise<void> {
-  chrome.declarativeNetRequest.getDynamicRules((rules) => {
-    const ids = rules.map(r => r.id);
-    chrome.declarativeNetRequest.updateDynamicRules({
-      removeRuleIds: ids,
-      addRules: [],
-    });
-  });
-}
+  const event: TrackerEvent = {
+    id: Date.now(),
+    domain,
+    sourceWebsite,
+    company: meta?.owner ?? 'Unknown',
+    riskLevel: RiskLevel.WARNING,
+    action: 'Blocked',
+    timestamp: new Date().toISOString(),
+  };
 
-export async function enableAdBlocking(): Promise<void> {
-  await chrome.declarativeNetRequest.updateEnabledRulesets({
-    enableRulesetIds: ['easylist_rules'],
-  });
-  console.log('Echo TrackerEngine: Ad blocking enabled.');
-}
-
-export async function disableAdBlocking(): Promise<void> {
-  await chrome.declarativeNetRequest.updateEnabledRulesets({
-    disableRulesetIds: ['easylist_rules'],
-  });
-  console.log('Echo TrackerEngine: Ad blocking disabled.');
-}
-
-export async function allowlistSite(hostname: string): Promise<void> {
-  const result = await chrome.storage.local.get(['allowlistedSites']);
-  const sites: string[] = result.allowlistedSites || [];
-
-  if (sites.includes(hostname)) return;
-  sites.push(hostname);
-
-  const ruleId = ALLOWLIST_RULE_ID_BASE + sites.indexOf(hostname);
-
-  await chrome.declarativeNetRequest.updateDynamicRules({
-    addRules: [{
-      id: ruleId,
-      priority: 1000,
-      action: { type: chrome.declarativeNetRequest.RuleActionType.ALLOW },
-      condition: {
-        initiatorDomains: [hostname],
-        resourceTypes: [
-          chrome.declarativeNetRequest.ResourceType.SCRIPT,
-          chrome.declarativeNetRequest.ResourceType.IMAGE,
-          chrome.declarativeNetRequest.ResourceType.XMLHTTPREQUEST,
-          chrome.declarativeNetRequest.ResourceType.PING,
-          chrome.declarativeNetRequest.ResourceType.SUB_FRAME,
-        ],
-      },
-    }],
-    removeRuleIds: [],
-  });
-
-  await chrome.storage.local.set({ allowlistedSites: sites });
-  console.log(`Echo TrackerEngine: Allowlisted ${hostname}`);
-}
-
-export async function removeAllowlistedSite(hostname: string): Promise<void> {
-  const result = await chrome.storage.local.get(['allowlistedSites']);
-  const sites: string[] = result.allowlistedSites || [];
-
-  const index = sites.indexOf(hostname);
-  if (index === -1) return;
-
-  const ruleId = ALLOWLIST_RULE_ID_BASE + index;
-
-  await chrome.declarativeNetRequest.updateDynamicRules({
-    removeRuleIds: [ruleId],
-    addRules: [],
-  });
-
-  await chrome.storage.local.set({ allowlistedSites: sites.filter(s => s !== hostname) });
-  console.log(`Echo TrackerEngine: Removed allowlist for ${hostname}`);
-}
-
-export async function restoreAllowlistRules(): Promise<void> {
-  const result = await chrome.storage.local.get(['allowlistedSites']);
-  const sites: string[] = result.allowlistedSites || [];
-  if (sites.length === 0) return;
-
-  const rules = sites.map((hostname, index) => ({
-    id: ALLOWLIST_RULE_ID_BASE + index,
-    priority: 1000,
-    action: { type: chrome.declarativeNetRequest.RuleActionType.ALLOW },
-    condition: {
-      initiatorDomains: [hostname],
-      resourceTypes: [
-        chrome.declarativeNetRequest.ResourceType.SCRIPT,
-        chrome.declarativeNetRequest.ResourceType.IMAGE,
-        chrome.declarativeNetRequest.ResourceType.XMLHTTPREQUEST,
-        chrome.declarativeNetRequest.ResourceType.PING,
-        chrome.declarativeNetRequest.ResourceType.SUB_FRAME,
-      ],
-    },
-  }));
-
-  await chrome.declarativeNetRequest.updateDynamicRules({
-    addRules: rules,
-    removeRuleIds: rules.map(r => r.id),
-  });
-
-  console.log(`Echo TrackerEngine: Restored ${sites.length} allowlist rules.`);
-}
+  await logTrackerEvent(event);
+});

@@ -1,23 +1,17 @@
 /**
  * Echo Privacy - Ad Blocker (ISOLATED World)
- *
- * This script runs in Chrome's isolated content script world
- * It CAN access chrome.* APIs but cannot directly intercept page JavaScript
- *
- * Features:
- * - CSS-based ad hiding
- * - Settings management via chrome.storage
- * - Shadow DOM ad hiding
+ * Runs in Chrome's isolated content script world.
+ * Checks both isProtectionOn AND isAdBlockingOn before injecting.
+ * Responds to storage changes to enable/disable without page reload.
  */
 
-// ===========================================
-// CSS RULES FOR AD HIDING
-// ===========================================
-
+// ---------------------------------------------------------------------------
+// CSS — deliberately conservative to avoid breaking legitimate site UI
+// Removed: data-google-query-id (matches Outlook), high z-index rules
+// (matches dropdowns), generic overlay rules (matches modals)
+// ---------------------------------------------------------------------------
 const AD_BLOCK_CSS = `
-/* Echo Privacy - Cosmetic Ad Blocking */
-
-/* Google Ads */
+/* Google Ads — specific IDs only */
 ins.adsbygoogle,
 [id*="google_ads"],
 [id*="div-gpt-ad"],
@@ -29,58 +23,24 @@ div[id^="div-gpt-"],
   width: 0 !important;
 }
 
-/* Common ad containers */
-[class*="ad-container"]:not([class*="head"]):not([class*="read"]):not([class*="thread"]),
-[id*="ad-container"]:not([id*="head"]):not([id*="read"]),
-[class*="advertisement"],
-[data-ad],
-[data-ad-slot],
-[data-google-query-id] {
+/* Common ad containers — with exclusions to protect site UI */
+[class*="ad-container"]:not([class*="head"]):not([class*="read"]):not([class*="thread"]):not([class*="upload"]):not([class*="download"]):not([class*="spread"]),
+[id*="ad-container"]:not([id*="head"]):not([id*="read"]):not([id*="upload"]):not([id*="download"]),
+[class*="advertisement"]:not([class*="manage"]):not([class*="settings"]) {
   display: none !important;
 }
 
-/* Ad networks */
-[class*="taboola"],
-[class*="outbrain"],
-[class*="revcontent"],
-[class*="mgid"],
-[class*="sponsored-content"],
-[class*="native-ad"] {
+/* Ad networks — named networks only, not generic class fragments */
+[class*="taboola-widget"],
+[class*="outbrain-widget"],
+[class*="revcontent-widget"],
+[class*="mgid-widget"],
+[class*="native-ad-widget"] {
   display: none !important;
 }
 
-/* Interstitials & overlays */
-[class*="interstitial"],
-[id*="interstitial"],
-[class*="overlay-ad"],
-[class*="ad-overlay"],
-[class*="fullscreen-ad"],
-[class*="modal-ad"],
-[class*="popup-ad"] {
-  display: none !important;
-}
-
-/* Push notifications */
-[class*="push-notification"]:not([class*="settings"]),
-[class*="web-push"]:not([class*="settings"]),
-#onesignal-bell-container,
-#onesignal-slidedown-container,
-[class*="onesignal"],
-.notifyjs-corner {
-  display: none !important;
-}
-
-/* FOMO notifications */
-.fomo-notification,
-[class*="fomo-notification"],
-[class*="sales-pop"],
-[class*="recent-sales"],
-[class*="proof-notification"] {
-  display: none !important;
-}
-
-/* Video ads */
-[class*="video-ad"],
+/* Video ads — specific containers */
+[class*="video-ad-overlay"],
 [class*="preroll-ad"],
 [class*="ima-ad-container"],
 .ytp-ad-module,
@@ -88,22 +48,14 @@ div[id^="div-gpt-"],
   display: none !important;
 }
 
-/* Banner ads */
-[class*="banner-ad"],
-[id*="banner-ad"],
-iframe[src*="doubleclick"],
-iframe[src*="googlesyndication"],
-iframe[src*="googleadservices"] {
+/* Banner ads — specific iframe sources only */
+iframe[src*="doubleclick.net/"],
+iframe[src*="googlesyndication.com/"],
+iframe[src*="googleadservices.com/"] {
   display: none !important;
 }
 
-/* High z-index overlays (likely ads) */
-div[style*="z-index: 2147483647"],
-div[style*="z-index: 9999999"] {
-  display: none !important;
-}
-
-/* Standard IAB banner sizes */
+/* Standard IAB banner sizes — only exact iframe dimensions */
 iframe[width="728"][height="90"],
 iframe[width="300"][height="250"],
 iframe[width="160"][height="600"],
@@ -113,263 +65,183 @@ iframe[width="320"][height="50"] {
   display: none !important;
 }
 
-/* Sponsored content - reduce visibility */
+/* FOMO / social proof popups */
+.fomo-notification,
+[class*="fomo-notification"],
+[class*="sales-pop"],
+[class*="recent-sales"],
+[class*="proof-notification"] {
+  display: none !important;
+}
+
+/* Push notification prompts — not browser native ones */
+#onesignal-bell-container,
+#onesignal-slidedown-container,
+[class*="onesignal"],
+.notifyjs-corner {
+  display: none !important;
+}
+
+/* Sponsored content */
 .sponsored-post,
-.promoted-content,
-.promoted-post,
-.partner-content {
+.promoted-post {
   opacity: 0.3 !important;
 }
 
-/* Newsletter/subscription popups */
+/* Newsletter popups */
 [class*="newsletter-popup"],
 [class*="subscribe-popup"],
-[class*="subscription-popup"],
 [id*="newsletter-popup"] {
   display: none !important;
 }
 `;
 
-// ===========================================
-// STATE
-// ===========================================
+// ---------------------------------------------------------------------------
+// State
+// ---------------------------------------------------------------------------
+let isEnabled = false;
 
-let isEnabled = true;
-
-// ===========================================
-// CSS INJECTION
-// ===========================================
-
+// ---------------------------------------------------------------------------
+// Style injection / removal
+// ---------------------------------------------------------------------------
 function injectStyles(): void {
   if (document.getElementById('echo-adblock-styles')) return;
-
   const style = document.createElement('style');
   style.id = 'echo-adblock-styles';
   style.textContent = AD_BLOCK_CSS;
-
-  const target = document.head || document.documentElement;
-  if (target) {
-    target.appendChild(style);
-    console.log('[Echo AdBlock] ISOLATED: Injected hardcoded CSS rules');
-  }
+  (document.head || document.documentElement)?.appendChild(style);
+  console.log('[Echo AdBlock] CSS rules injected');
 }
 
 function removeStyles(): void {
-  // Remove all Echo-injected styles
-  const styleIds = ['echo-adblock-styles', 'echo-cosmetic-generic', 'echo-cosmetic-domain'];
-  for (const id of styleIds) {
-    const style = document.getElementById(id);
-    if (style) {
-      style.remove();
-    }
-  }
-  console.log('[Echo AdBlock] ISOLATED: Removed CSS rules');
+  ['echo-adblock-styles', 'echo-cosmetic-generic', 'echo-cosmetic-domain'].forEach(id => {
+    document.getElementById(id)?.remove();
+  });
+  console.log('[Echo AdBlock] CSS rules removed');
 }
 
-// ===========================================
-// GENERATED COSMETIC RULES (from EasyList)
-// ===========================================
-
-let domainRulesCache: Record<string, string[]> | null = null;
-
-/**
- * Load and inject generic cosmetic CSS from generated file
- */
+// ---------------------------------------------------------------------------
+// Generated cosmetic rules
+// ---------------------------------------------------------------------------
 async function loadGeneratedCSS(): Promise<void> {
   if (document.getElementById('echo-cosmetic-generic')) return;
-
   try {
-    const cssUrl = chrome.runtime.getURL('rules/cosmetic-generic.css');
-    const response = await fetch(cssUrl);
-
-    if (!response.ok) {
-      console.log('[Echo AdBlock] ISOLATED: No generated cosmetic CSS found');
-      return;
-    }
-
+    const response = await fetch(chrome.runtime.getURL('rules/cosmetic-generic.css'));
+    if (!response.ok) return;
     const css = await response.text();
-
     const style = document.createElement('style');
     style.id = 'echo-cosmetic-generic';
     style.textContent = css;
-
-    const target = document.head || document.documentElement;
-    if (target) {
-      target.appendChild(style);
-      console.log(`[Echo AdBlock] ISOLATED: Injected generated cosmetic CSS (${(css.length / 1024).toFixed(1)} KB)`);
-    }
-  } catch (error) {
-    // Silently fail - hardcoded rules are already active as fallback
-    console.log('[Echo AdBlock] ISOLATED: Could not load generated CSS, using hardcoded fallback');
+    (document.head || document.documentElement)?.appendChild(style);
+  } catch {
+    // Silently fail — hardcoded rules are active as fallback
   }
 }
 
-/**
- * Load domain rules JSON and cache in memory
- */
-async function loadDomainRules(): Promise<Record<string, string[]>> {
-  if (domainRulesCache !== null) {
-    return domainRulesCache;
-  }
+let domainRulesCache: Record<string, string[]> | null = null;
 
-  try {
-    const jsonUrl = chrome.runtime.getURL('rules/cosmetic-domains.json');
-    const response = await fetch(jsonUrl);
-
-    if (!response.ok) {
-      domainRulesCache = {};
-      return domainRulesCache;
-    }
-
-    const data: Record<string, string[]> = await response.json();
-    domainRulesCache = data;
-    console.log(`[Echo AdBlock] ISOLATED: Loaded domain rules for ${Object.keys(data).length} domains`);
-    return data;
-  } catch (error) {
-    domainRulesCache = {};
-    return domainRulesCache;
-  }
-}
-
-/**
- * Apply domain-specific cosmetic rules for current hostname
- */
 async function applyDomainRules(): Promise<void> {
   if (document.getElementById('echo-cosmetic-domain')) return;
-
-  const domainRules = await loadDomainRules();
-  const hostname = window.location.hostname.toLowerCase();
-
-  // Collect selectors for this domain and parent domains
-  const selectors: string[] = [];
-
-  // Check exact domain and parent domains (e.g., www.example.com, example.com)
-  const parts = hostname.split('.');
-  for (let i = 0; i < parts.length - 1; i++) {
-    const domain = parts.slice(i).join('.');
-    if (domainRules[domain]) {
-      selectors.push(...domainRules[domain]);
+  try {
+    if (!domainRulesCache) {
+      const response = await fetch(chrome.runtime.getURL('rules/cosmetic-domains.json'));
+      if (!response.ok) return;
+      domainRulesCache = await response.json();
     }
-  }
-
-  if (selectors.length === 0) return;
-
-  // Deduplicate selectors
-  const uniqueSelectors = [...new Set(selectors)];
-
-  const css = uniqueSelectors.join(',\n') + ' {\n  display: none !important;\n}';
-
-  const style = document.createElement('style');
-  style.id = 'echo-cosmetic-domain';
-  style.textContent = css;
-
-  const target = document.head || document.documentElement;
-  if (target) {
-    target.appendChild(style);
-    console.log(`[Echo AdBlock] ISOLATED: Applied ${uniqueSelectors.length} domain-specific rules for ${hostname}`);
+    const hostname = window.location.hostname.toLowerCase();
+    const selectors: string[] = [];
+    const parts = hostname.split('.');
+    for (let i = 0; i < parts.length - 1; i++) {
+      const domain = parts.slice(i).join('.');
+      if (domainRulesCache![domain]) selectors.push(...domainRulesCache![domain]);
+    }
+    if (selectors.length === 0) return;
+    const css = [...new Set(selectors)].join(',\n') + ' {\n  display: none !important;\n}';
+    const style = document.createElement('style');
+    style.id = 'echo-cosmetic-domain';
+    style.textContent = css;
+    (document.head || document.documentElement)?.appendChild(style);
+  } catch {
+    // Silently fail
   }
 }
 
-// ===========================================
-// SHADOW DOM HANDLING
-// ===========================================
-
-const adSelectors = [
-  '[class*="ad-container"]',
-  '[class*="advertisement"]',
-  '[class*="adsbygoogle"]',
-  '[class*="taboola"]',
-  '[class*="outbrain"]',
-  '[class*="sponsored"]'
+// ---------------------------------------------------------------------------
+// Shadow DOM
+// ---------------------------------------------------------------------------
+const AD_SELECTORS = [
+  'ins.adsbygoogle',
+  '[id*="google_ads"]',
+  '[class*="taboola-widget"]',
+  '[class*="outbrain-widget"]',
 ];
 
 function hideAdsInShadowDOM(): void {
   if (!isEnabled) return;
-
-  const processNode = (node: Element): void => {
-    if (node.shadowRoot) {
-      // Inject styles into shadow root
-      if (!node.shadowRoot.querySelector('#echo-shadow-styles')) {
-        const style = document.createElement('style');
-        style.id = 'echo-shadow-styles';
-        style.textContent = AD_BLOCK_CSS;
-        node.shadowRoot.appendChild(style);
-      }
-
-      // Hide ad elements
-      adSelectors.forEach(selector => {
-        try {
-          node.shadowRoot!.querySelectorAll(selector).forEach(el => {
-            (el as HTMLElement).style.display = 'none';
-          });
-        } catch (e) {
-          // Selector may be invalid
-        }
-      });
-
-      // Recursively process shadow root children
-      node.shadowRoot.querySelectorAll('*').forEach(processNode);
+  document.querySelectorAll('*').forEach((node) => {
+    if (node.shadowRoot && !node.shadowRoot.querySelector('#echo-shadow-styles')) {
+      const style = document.createElement('style');
+      style.id = 'echo-shadow-styles';
+      style.textContent = AD_BLOCK_CSS;
+      node.shadowRoot.appendChild(style);
     }
-  };
-
-  document.querySelectorAll('*').forEach(processNode);
+  });
 }
 
-// ===========================================
-// INITIALIZATION
-// ===========================================
+// ---------------------------------------------------------------------------
+// Enable / disable blocking
+// ---------------------------------------------------------------------------
+function enableBlocking(): void {
+  isEnabled = true;
+  injectStyles();
+  loadGeneratedCSS().catch(() => {});
+  applyDomainRules().catch(() => {});
+  hideAdsInShadowDOM();
+  console.log('[Echo AdBlock] Blocking enabled');
+}
 
+function disableBlocking(): void {
+  isEnabled = false;
+  removeStyles();
+  // Also remove shadow DOM styles
+  document.querySelectorAll('#echo-shadow-styles').forEach(el => el.remove());
+  console.log('[Echo AdBlock] Blocking disabled');
+}
+
+// ---------------------------------------------------------------------------
+// Initialisation — single entry point, single storage check
+// ---------------------------------------------------------------------------
 function init(): void {
-  console.log('[Echo AdBlock] ISOLATED world script initializing...');
+  // Check BOTH protection and ad blocking state before doing anything
+  chrome.storage.local.get(['isProtectionOn', 'isAdBlockingOn'], (result) => {
+    const protectionOn = result.isProtectionOn !== false;
+    const adBlockingOn = result.isAdBlockingOn !== false;
 
-  // Check if enabled in settings
-  chrome.storage.local.get(['isAdBlockingOn'], (result) => {
-    isEnabled = result.isAdBlockingOn !== false;
-
-    if (!isEnabled) {
-      console.log('[Echo AdBlock] ISOLATED: Disabled via settings');
-      return;
-    }
-
-    // 1. Inject hardcoded CSS rules immediately (instant fallback)
-    injectStyles();
-
-    // 2. Load generated cosmetic rules asynchronously
-    loadGeneratedCSS().catch(() => {});
-    applyDomainRules().catch(() => {});
-
-    // Handle Shadow DOM (run after DOM is ready)
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => {
-        hideAdsInShadowDOM();
-      });
+    if (protectionOn && adBlockingOn) {
+      enableBlocking();
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', hideAdsInShadowDOM);
+      }
+      setInterval(hideAdsInShadowDOM, 2000);
     } else {
-      hideAdsInShadowDOM();
+      console.log('[Echo AdBlock] Disabled on init — protection or ad blocking is off');
     }
-
-    // Periodic Shadow DOM check (for dynamically created shadow roots)
-    setInterval(hideAdsInShadowDOM, 2000);
-
-    console.log('[Echo AdBlock] ISOLATED: CSS blocking active');
   });
 
-  // Listen for settings changes
-  chrome.storage.onChanged.addListener((changes) => {
-    if (changes.isAdBlockingOn) {
-      const newValue = changes.isAdBlockingOn.newValue;
-      isEnabled = newValue !== false;
+  // Single unified storage listener — no duplicates
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area !== 'local') return;
+    if (!changes.isProtectionOn && !changes.isAdBlockingOn) return;
 
-      if (isEnabled) {
-        console.log('[Echo AdBlock] ISOLATED: Enabled via settings');
-        injectStyles();
-        hideAdsInShadowDOM();
+    chrome.storage.local.get(['isProtectionOn', 'isAdBlockingOn'], (result) => {
+      const shouldBlock = result.isProtectionOn !== false && result.isAdBlockingOn !== false;
+      if (shouldBlock) {
+        enableBlocking();
       } else {
-        console.log('[Echo AdBlock] ISOLATED: Disabled via settings');
-        removeStyles();
+        disableBlocking();
       }
-    }
+    });
   });
 }
 
-// Run immediately
 init();

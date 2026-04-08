@@ -66,14 +66,19 @@ export const ExtensionPopup: React.FC<ExtensionPopupProps> = ({
   const handleAllowlistToggle = async () => {
     if (!currentHost || allowlistLoading) return;
     setAllowlistLoading(true);
-
+  
     try {
-      // Send message to background to handle the rule change
       await chrome.runtime.sendMessage({
         type: isSiteAllowlisted ? 'REMOVE_ALLOWLIST' : 'ADD_ALLOWLIST',
         hostname: currentHost,
       });
       setIsSiteAllowlisted(!isSiteAllowlisted);
+  
+      // Reload the active tab so the new allowlist rule takes effect immediately
+      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        const tabId = tabs[0]?.id;
+        if (tabId) chrome.tabs.reload(tabId);
+      });
     } catch (err) {
       console.error('Echo: Allowlist toggle failed', err);
     } finally {

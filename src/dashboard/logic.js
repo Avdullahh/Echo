@@ -259,40 +259,49 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- 6. SETTINGS ACTIONS ---
-    // Ad Blocking Toggle
     const adBlockingToggle = document.getElementById('ad-blocking-toggle');
     if (adBlockingToggle) {
-        // Load current state
         chrome.storage.local.get(['isAdBlockingOn'], (data) => {
-            adBlockingToggle.checked = data.isAdBlockingOn !== false; // Default true
+            adBlockingToggle.checked = data.isAdBlockingOn !== false;
         });
 
-        // Handle toggle change
         adBlockingToggle.addEventListener('change', (e) => {
             const isEnabled = e.target.checked;
             chrome.storage.local.set({ isAdBlockingOn: isEnabled }, () => {
                 console.log(`Ad blocking ${isEnabled ? 'enabled' : 'disabled'}`);
+                // Get all tabs and reload any that aren't this dashboard page
+                chrome.tabs.query({}, (tabs) => {
+                    tabs.forEach(tab => {
+                        if (tab.id && tab.url && !tab.url.startsWith('chrome-extension://')) {
+                            chrome.tabs.reload(tab.id);
+                        }
+                    });
+                });
             });
         });
     }
 
-    // Cookie Banner Blocking Toggle
     const cookieBannerToggle = document.getElementById('cookie-banner-toggle');
     if (cookieBannerToggle) {
-        // Load current state
         chrome.storage.local.get(['isCookieBannerBlockingOn'], (data) => {
-            cookieBannerToggle.checked = data.isCookieBannerBlockingOn !== false; // Default true
+            cookieBannerToggle.checked = data.isCookieBannerBlockingOn !== false;
         });
 
-        // Handle toggle change
         cookieBannerToggle.addEventListener('change', (e) => {
             const isEnabled = e.target.checked;
             chrome.storage.local.set({ isCookieBannerBlockingOn: isEnabled }, () => {
                 console.log(`Cookie banner blocking ${isEnabled ? 'enabled' : 'disabled'}`);
+                // Get all tabs and reload any that aren't this dashboard page
+                chrome.tabs.query({}, (tabs) => {
+                    tabs.forEach(tab => {
+                        if (tab.id && tab.url && !tab.url.startsWith('chrome-extension://')) {
+                            chrome.tabs.reload(tab.id);
+                       }
+                    });
+                });
             });
         });
     }
-
     const exportBtn = document.getElementById('export-data-btn');
     if (exportBtn) {
         exportBtn.addEventListener('click', () => {
@@ -309,10 +318,17 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const clearBtn = document.getElementById('clear-cache-btn');
-    if(clearBtn) {
+    if (clearBtn) {
         clearBtn.addEventListener('click', () => {
-            if(confirm("Permanently delete all tracking history?")) {
-                chrome.storage.local.clear(() => window.location.reload());
+            if (confirm("Permanently delete all tracking history?")) {
+                // Only clear tracker data — preserve settings so extension stays ON
+                chrome.storage.local.set({
+                    detectedTrackers: [],
+                    trackersBlocked: 0,
+                    trackerMetadata: {}
+                }, () => {
+                    window.location.reload();
+                });
             }
         });
     }
