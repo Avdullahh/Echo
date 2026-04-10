@@ -499,3 +499,31 @@ app.post('/api/seed/turtlecute', async (req, res) => {
   }
 });
 
+app.post('/api/seed/consent-domains', async (req, res) => {
+  const consentDomains = [
+    // Google consent iframe — blocks the consent wall, Google falls back to cookieless
+    { domain: 'consent.google.com',     owner: 'Google',    category: 'Advertising' },
+    // Other common consent management platforms served cross-origin
+    { domain: 'consent.youtube.com',    owner: 'Google',    category: 'Advertising' },
+    { domain: 'consentcdn.cookiebot.com', owner: 'Cookiebot', category: 'Analytics' },
+  ];
+
+  try {
+    const lastTracker = await Tracker.findOne({}).sort({ id: -1 });
+    let nextId = lastTracker ? lastTracker.id + 1 : 1;
+    const existingDomains = new Set(
+      (await Tracker.find({}, 'domain')).map(t => t.domain)
+    );
+    const toInsert = consentDomains
+      .filter(d => !existingDomains.has(d.domain))
+      .map(d => ({ ...d, id: nextId++, risk: 'WARNING' }));
+
+    if (toInsert.length === 0) {
+      return res.json({ message: 'All domains already exist', added: 0 });
+    }
+    await Tracker.insertMany(toInsert);
+    res.json({ message: 'Success', added: toInsert.length });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});

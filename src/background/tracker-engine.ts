@@ -38,6 +38,7 @@ export async function refreshBlocklist(): Promise<void> {
             chrome.declarativeNetRequest.ResourceType.IMAGE,
             chrome.declarativeNetRequest.ResourceType.XMLHTTPREQUEST,
             chrome.declarativeNetRequest.ResourceType.PING,
+            chrome.declarativeNetRequest.ResourceType.SUB_FRAME,
           ],
         },
       };

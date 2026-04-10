@@ -286,10 +286,13 @@ function analyseBanner(banner: HTMLElement): {
   hasAcceptAll: boolean;
   isSafeToHide: boolean;
 } {
+  const findBtn = (patterns: RegExp[]) =>
+    findButton(banner, patterns) || findButton(document.body, patterns);
+
   return {
-    hasRejectAll: !!findButton(banner, REJECT_ALL_PATTERNS),
-    hasEssentialOnly: !!findButton(banner, NECESSARY_ONLY_PATTERNS),
-    hasAcceptAll: !!findButton(banner, ACCEPT_ALL_PATTERNS),
+    hasRejectAll: !!findBtn(REJECT_ALL_PATTERNS),
+    hasEssentialOnly: !!findBtn(NECESSARY_ONLY_PATTERNS),
+    hasAcceptAll: !!findBtn(ACCEPT_ALL_PATTERNS),
     isSafeToHide: isSafeToHide(banner),
   };
 }
@@ -306,66 +309,58 @@ function executePreference(preference: string): void {
 
   const banner = activeBanner;
 
+  // Try finding buttons in banner first, fall back to full document
+  const findBtn = (patterns: RegExp[]) =>
+    findButton(banner, patterns) || findButton(document.body, patterns);
+
   switch (preference) {
     case 'block': {
-      // Reject all tracking — click Reject All button
-      const rejectBtn = findButton(banner, REJECT_ALL_PATTERNS);
+      const rejectBtn = findBtn(REJECT_ALL_PATTERNS);
       if (rejectBtn) {
         console.log('[Echo Cookie] Executing: Reject All');
         click(rejectBtn);
         verify(banner, 'block');
         return;
       }
-      // Fallback to essential only if no reject all
-      const essentialBtn = findButton(banner, NECESSARY_ONLY_PATTERNS);
+      const essentialBtn = findBtn(NECESSARY_ONLY_PATTERNS);
       if (essentialBtn) {
         console.log('[Echo Cookie] Executing: Essential Only (fallback from block)');
         click(essentialBtn);
         verify(banner, 'block');
         return;
       }
-      // Nothing to click — hide if safe
-      if (isSafeToHide(banner)) {
-        hide(banner);
-      }
+      if (isSafeToHide(banner)) hide(banner);
       break;
     }
 
     case 'essential': {
-      // Essential only — try necessary button first, then reject all
-      const essentialBtn = findButton(banner, NECESSARY_ONLY_PATTERNS);
+      const essentialBtn = findBtn(NECESSARY_ONLY_PATTERNS);
       if (essentialBtn) {
         console.log('[Echo Cookie] Executing: Essential Only');
         click(essentialBtn);
         verify(banner, 'essential');
         return;
       }
-      const rejectBtn = findButton(banner, REJECT_ALL_PATTERNS);
+      const rejectBtn = findBtn(REJECT_ALL_PATTERNS);
       if (rejectBtn) {
         console.log('[Echo Cookie] Executing: Reject All (fallback for essential)');
         click(rejectBtn);
         verify(banner, 'essential');
         return;
       }
-      if (isSafeToHide(banner)) {
-        hide(banner);
-      }
+      if (isSafeToHide(banner)) hide(banner);
       break;
     }
 
     case 'all': {
-      // Accept all — find and click accept all button
-      const acceptBtn = findButton(banner, ACCEPT_ALL_PATTERNS);
+      const acceptBtn = findBtn(ACCEPT_ALL_PATTERNS);
       if (acceptBtn) {
         console.log('[Echo Cookie] Executing: Accept All');
         click(acceptBtn);
         verify(banner, 'all');
         return;
       }
-      // No accept all button found — hide
-      if (isSafeToHide(banner)) {
-        hide(banner);
-      }
+      if (isSafeToHide(banner)) hide(banner);
       break;
     }
   }
