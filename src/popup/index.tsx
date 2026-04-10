@@ -71,7 +71,7 @@ const PopupApp = () => {
   if (isProtectionOn === null) return null;
 
   return (
-    <div className="w-[350px] h-[550px] bg-bg-canvas text-text-primary overflow-y-auto border border-border-subtle shadow-2xl">
+    <div className="w-[350px] h-[500px] bg-bg-canvas text-text-primary border border-border-subtle shadow-2xl flex flex-col">
       <ExtensionPopup
         trackers={realTrackers}
         blockedCount={blockedCount}

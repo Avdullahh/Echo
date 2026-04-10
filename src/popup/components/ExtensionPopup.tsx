@@ -36,7 +36,6 @@ export const ExtensionPopup: React.FC<ExtensionPopupProps> = ({
   onCookiePreference,
 }) => {
   const [explanation, setExplanation] = useState<AdExplanation | null>(null);
-  const [showExplanation, setShowExplanation] = useState(false);
   const [currentHost, setCurrentHost] = useState<string>('');
   const [isSiteAllowlisted, setIsSiteAllowlisted] = useState(false);
   const [allowlistLoading, setAllowlistLoading] = useState(false);
@@ -132,17 +131,15 @@ export const ExtensionPopup: React.FC<ExtensionPopupProps> = ({
   );
 
   return (
-    <div className="w-full min-h-full flex flex-col font-sans text-text-primary relative bg-bg-canvas selection:bg-accent-primary selection:text-neutral-0">
+    <div className="w-full min-h-full flex flex-col font-sans text-text-primary relative bg-bg-canvas selection:bg-accent-primary selection:text-neutral-0 h-full">
 
       {/* BACKGROUND GLOW */}
       <div className="absolute top-[-20%] left-[-20%] w-[220px] h-[220px] bg-accent-softBg rounded-full blur-[70px] pointer-events-none opacity-60" />
 
       {/* HEADER & NAV ROW */}
-      <div className="relative z-30 px-5 pt-6 pb-2 flex flex-col gap-4">
+      <div className="relative z-30 px-5 pt-3 pb-1 flex flex-col gap-2">
         <div className="flex items-center justify-center gap-2 mb-1">
-          <div className="w-5 h-5 bg-accent-primary rounded-sm flex items-center justify-center text-text-onAccent shadow-glowAccent">
-            <span className="font-bold text-[10px]">E</span>
-          </div>
+          <img src="/icons/icon128.png" alt="Echo" className="w-6 h-6 object-contain" />
           <span className="font-bold text-lg tracking-tight text-text-primary">Echo</span>
         </div>
 
@@ -155,7 +152,7 @@ export const ExtensionPopup: React.FC<ExtensionPopupProps> = ({
       </div>
 
       {/* POWER BUTTON AREA */}
-      <div className="relative z-10 flex flex-col items-center justify-center py-6">
+      <div className="relative z-10 flex flex-col items-center justify-center py-3">
         <button
           onClick={() => setProtectionOn(!isProtectionOn)}
           className="group relative focus:outline-none focus-visible:ring-4 focus-visible:ring-accent-primary/30 rounded-full z-10"
@@ -163,20 +160,20 @@ export const ExtensionPopup: React.FC<ExtensionPopupProps> = ({
           <div className={`absolute inset-0 rounded-full blur-2xl transition-all duration-700
             ${isProtectionOn ? 'bg-accent-primary/30' : 'bg-transparent'}`}
           />
-          <div className={`w-32 h-32 rounded-full flex items-center justify-center transition-all duration-300 relative border-4
+          <div className={`w-24 h-24 rounded-full flex items-center justify-center transition-all duration-300 relative border-4
             ${isProtectionOn
               ? 'bg-accent-primary border-accent-primary shadow-glowAccent scale-100'
               : 'bg-surface-card border-border-default scale-95 hover:border-border-strong'
             }`}
           >
-            <Power className={`w-12 h-12 transition-colors duration-300 stroke-[2.5px]
+            <Power className={`w-9 h-9 transition-colors duration-300 stroke-[2.5px]
               ${isProtectionOn ? 'text-text-onAccent' : 'text-icon-muted group-hover:text-text-secondary'}`}
             />
           </div>
         </button>
 
-        <div className="text-center mt-6 px-4">
-          <h2 className="text-2xl font-bold text-text-primary tracking-tight mb-1">
+        <div className="text-center mt-3 px-4">
+          <h2 className="text-1 font-bold text-text-primary tracking-tight mb-1">
             {isProtectionOn ? 'Echo On' : 'Echo Off'}
           </h2>
           <p className="text-xs text-text-muted leading-relaxed">
@@ -346,7 +343,7 @@ export const ExtensionPopup: React.FC<ExtensionPopupProps> = ({
               <div className="text-[10px] text-text-muted">
                 {isSiteAllowlisted
                   ? 'Tap to resume protection on this site'
-                  : 'Trust this site — stop blocking its trackers'}
+                  : 'Trust this site - stop blocking its trackers'}
               </div>
             </div>
           </button>
@@ -357,7 +354,7 @@ export const ExtensionPopup: React.FC<ExtensionPopupProps> = ({
       {persona && (
         <div className="mx-3 mb-3">
           <button
-            onClick={() => onOpenDashboard('overview')}
+            onClick={() => onOpenDashboard('home')}
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl bg-surface-card border border-border-subtle hover:border-accent-primary/50 transition-colors text-left"
           >
             <div className="w-8 h-8 rounded-full bg-accent-primary/10 border border-accent-primary/30 flex items-center justify-center shrink-0">
@@ -366,91 +363,40 @@ export const ExtensionPopup: React.FC<ExtensionPopupProps> = ({
             <div className="flex-1 min-w-0">
               <div className="text-[11px] font-semibold text-text-primary truncate">{persona}</div>
               <div className="text-[10px] text-text-muted">
-                Algorithms see you as this — tap to explore
+                Algorithms see you as this - tap to explore
               </div>
-            </div>
-            <div className="text-right shrink-0">
-              <div className="text-sm font-bold text-accent-primary">{confidenceScore}%</div>
-              <div className="text-[9px] text-text-muted uppercase tracking-wide">Confidence</div>
             </div>
           </button>
         </div>
       )}
 
-      {/* FR4 — AD EXPLANATION PANEL */}
-      {isProtectionOn && (
-        <div className="relative z-20 mx-3 mb-3">
-
-          {explanation && !showExplanation && (
-            <button
-              onClick={() => setShowExplanation(true)}
-              className="w-full flex items-center gap-2 px-3 py-2 rounded-xl bg-surface-card border border-border-subtle hover:border-accent-primary/50 transition-colors text-left"
-            >
-              <Info className="w-3.5 h-3.5 text-accent-primary shrink-0" />
-              <span className="text-[11px] text-text-muted leading-tight truncate">
-                Why am I seeing ads here?
-              </span>
-              <span className="ml-auto text-[10px] text-accent-primary font-medium shrink-0">
-                Tap
-              </span>
-            </button>
-          )}
-
-          {explanation && showExplanation && (
-            <div className="rounded-xl bg-surface-card border border-accent-primary/30 p-3 space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5">
-                  <Info className="w-3.5 h-3.5 text-accent-primary" />
-                  <span className="text-[11px] font-semibold text-accent-primary uppercase tracking-wide">
-                    Why this ad?
-                  </span>
-                </div>
-                <button
-                  onClick={() => setShowExplanation(false)}
-                  className="text-text-muted hover:text-text-primary transition-colors"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              </div>
-
-              <p className="text-[11px] text-text-secondary leading-relaxed">
-                {explanation.sentence}
-              </p>
-
-              <div className="flex items-center gap-3 pt-1 border-t border-border-subtle">
-                <div className="text-center">
-                  <div className="text-sm font-bold text-text-primary">{explanation.siteCount}</div>
-                  <div className="text-[9px] text-text-muted uppercase tracking-wide">Sites tracked</div>
-                </div>
-                <div className="w-px h-6 bg-border-subtle" />
-                <div className="text-center flex-1 min-w-0">
-                  <div className="text-[10px] font-semibold text-text-primary truncate">
-                    "{explanation.inferredCategory}"
-                  </div>
-                  <div className="text-[9px] text-text-muted uppercase tracking-wide">Your profile</div>
-                </div>
-                <div className="w-px h-6 bg-border-subtle" />
-                <button
-                  onClick={() => onOpenDashboard('report')}
-                  className="text-[9px] text-accent-primary font-medium hover:underline shrink-0"
-                >
-                  Full report →
-                </button>
-              </div>
-            </div>
-          )}
-
           {!explanation && trackers.length === 0 && (
-            <div className="px-3 py-2 rounded-xl bg-surface-card border border-border-subtle">
-              <p className="text-[11px] text-text-muted text-center leading-tight">
-                Browse a few pages and Echo will explain why you're seeing ads here.
-              </p>
-            </div>
-          )}
+                      <div className="px-3 py-2 rounded-xl bg-surface-card border border-border-subtle">
+                        <p className="text-[11px] text-text-muted text-center leading-tight">
+                          Browse a few pages and Echo will explain why you're seeing ads here.
+                        </p>
+                      </div>
+                    )}
+              
+              <div className="flex-1" />
 
-        </div>
-      )}
+    {/* SPACER — pushes report button to bottom */}
+    <div className="flex-1" />
+
+    <div className="mt-auto pb-3 flex justify-center">
+      <button
+        onClick={() => {
+          const body = `**Site:** ${currentHost}\n\n**What happened:**\n\n**Expected behaviour:**\n\n*Reported via Echo extension*`;
+          const url = `https://github.com/Avdullahh/Echo/issues/new?title=Broken+site+report:+${encodeURIComponent(currentHost)}&body=${encodeURIComponent(body)}`;
+          chrome.tabs.create({ url });
+        }}
+        className="flex items-center gap-1.5 text-[10px] text-text-muted hover:text-accent-primary transition-colors bg-transparent border-none cursor-pointer"
+      >
+        <span>⚑</span>
+        <span>Report broken site</span>
+      </button>
+    </div>
 
     </div>
-  );
-};
+    );
+  };
