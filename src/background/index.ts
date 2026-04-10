@@ -72,6 +72,7 @@ chrome.storage.onChanged.addListener((changes, area) => {
 });
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+
   if (message.type === 'ADD_ALLOWLIST') {
     allowlistSite(message.hostname)
       .then(() => sendResponse({ success: true }))
@@ -83,6 +84,79 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     removeAllowlistedSite(message.hostname)
       .then(() => sendResponse({ success: true }))
       .catch((err: Error) => sendResponse({ success: false, error: err.message }));
+    return true;
+  }
+
+  if (message.type === 'COOKIE_BANNER_DETECTED') {
+    const tabId = _sender.tab?.id;
+    if (!tabId) { sendResponse({ success: false }); return true; }
+
+    chrome.storage.local.get(['cookieBannerState'], (result) => {
+      const state = result.cookieBannerState || {};
+      state[tabId] = {
+        hostname: message.hostname,
+        analysis: message.analysis,
+        detectedAt: new Date().toISOString(),
+        resolved: false,
+      };
+      chrome.storage.local.set({ cookieBannerState: state }, () => {
+        chrome.action.setBadgeText({ text: '!', tabId });
+        chrome.action.setBadgeBackgroundColor({ color: '#F59E0B', tabId });
+        console.log(`Echo: Cookie banner detected on ${message.hostname}`);
+        sendResponse({ success: true });
+      });
+    });
+    return true;
+  }
+
+  if (message.type === 'COOKIE_EXECUTE_PREFERENCE') {
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      const activeTabId = tabs[0]?.id;
+      if (!activeTabId) { sendResponse({ success: false }); return; }
+
+      const { preference, hostname } = message;
+
+      chrome.storage.local.get(['cookiePreferences'], (result) => {
+        const prefs = result.cookiePreferences || {};
+        prefs[hostname] = preference;
+        chrome.storage.local.set({ cookiePreferences: prefs }, () => {
+          console.log(`Echo: Cookie preference saved for ${hostname}: ${preference}`);
+        });
+      });
+
+      chrome.action.setBadgeText({ text: '', tabId: activeTabId });
+
+      chrome.storage.local.get(['cookieBannerState'], (result) => {
+        const state = result.cookieBannerState || {};
+        if (state[activeTabId]) {
+          state[activeTabId].resolved = true;
+          chrome.storage.local.set({ cookieBannerState: state });
+        }
+      });
+
+      chrome.tabs.sendMessage(activeTabId, {
+        type: 'COOKIE_EXECUTE_PREFERENCE',
+        preference,
+      }, () => {
+        sendResponse({ success: true });
+      });
+    });
+    return true;
+  }
+
+  if (message.type === 'COOKIE_BANNER_RESOLVED') {
+    const tabId = _sender.tab?.id;
+    if (!tabId) { sendResponse({ success: false }); return true; }
+
+    chrome.storage.local.get(['cookieBannerState'], (result) => {
+      const state = result.cookieBannerState || {};
+      if (state[tabId]) {
+        state[tabId].resolved = true;
+        chrome.storage.local.set({ cookieBannerState: state });
+      }
+      chrome.action.setBadgeText({ text: '', tabId });
+      sendResponse({ success: true });
+    });
     return true;
   }
 });

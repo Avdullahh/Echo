@@ -25,42 +25,329 @@
   });
 
   // ===========================================
-  // 1. POPUP/POP-UNDER BLOCKING
+  // 1. SMART POPUP INTERCEPTOR
   // ===========================================
-  const originalWindowOpen = window.open;
+
+  const GESTURE_TIMEOUT_MS = 1000; // AdGuard uses ~1000ms
+  let lastTrustedGestureTime = 0;
+  let lastTrustedGestureTarget: EventTarget | null = null;
+
+  // Track ALL trusted user input events — AdGuard tracks these specifically
+  const TRUSTED_EVENT_TYPES = [
+    'click', 'mousedown', 'mouseup',
+    'touchstart', 'touchend',
+    'keydown', 'keyup', 'keypress'
+  ];
+
+  function recordTrustedGesture(event: Event): void {
+    if (event.isTrusted) {
+      lastTrustedGestureTime = Date.now();
+      lastTrustedGestureTarget = event.target;
+    }
+  }
+
+  // Register listeners at capture phase so they fire before any page handlers
+  TRUSTED_EVENT_TYPES.forEach(type => {
+    window.addEventListener(type, recordTrustedGesture, true);
+  });
+
+  // ---------------------------------------------------------------------------
+  // Trusted domains popups from these are always allowed immediately
+  // ---------------------------------------------------------------------------
+  const TRUSTED_POPUP_DOMAINS = new Set([
+    'google.com', 'accounts.google.com', 'mail.google.com',
+    'docs.google.com', 'drive.google.com', 'meet.google.com',
+    'facebook.com', 'twitter.com', 'x.com',
+    'apple.com', 'appleid.apple.com',
+    'microsoft.com', 'login.microsoftonline.com', 'outlook.com',
+    'office.com', 'live.com', 'teams.microsoft.com',
+    'github.com', 'gitlab.com',
+    'paypal.com', 'checkout.paypal.com',
+    'stripe.com', 'checkout.stripe.com',
+    'youtube.com', 'vimeo.com', 'spotify.com',
+    'linkedin.com', 'instagram.com', 'reddit.com',
+    'zoom.us', 'whereby.com',
+    'amazon.com', 'ebay.com', 'etsy.com',
+    'wikipedia.org', 'stackoverflow.com',
+    'dropbox.com', 'notion.so', 'slack.com',
+    'discord.com', 'telegram.org',
+    'twitch.tv', 'netflix.com',
+    'bankofamerica.com', 'chase.com', 'barclays.co.uk',
+    'revolut.com', 'monzo.com', 'paypal.com',
+  ]);
+
+  // ---------------------------------------------------------------------------
+  // Known ad popup patterns from EasyList $popup rules + uBO filter lists
+  // These are blocked silently without showing any toast
+  // ---------------------------------------------------------------------------
+  const AD_POPUP_PATTERNS = [
+    'doubleclick', 'googlesyndication', 'googleadservices',
+    'popads', 'popcash', 'popunder', 'pop-under',
+    'adnxs', 'adform', 'criteo', 'taboola', 'outbrain',
+    'adsrvr', 'rubiconproject', 'pubmatic', 'openx',
+    'exoclick', 'juicyads', 'plugrush', 'propellerads',
+    'trafficjunky', 'trafficfactory', 'adcash', 'adclick',
+    'yllix', 'hilltopads', 'bidvertiser', 'clickadu',
+    'adsterra', 'ero-advertising', 'zeropark',
+    'mgid', 'revcontent', 'content.ad', 'sharethrough',
+    'adf.ly', 'shorte.st', 'linkbucks', 'bc.vc',
+    '/ads/', '/ad/', 'adserver', 'adclick',
+    'aff=', 'affid=', 'affiliate',
+    'popuptraffic', 'popup-ad', 'adpop',
+  ];
+
+  // ---------------------------------------------------------------------------
+  // Helper: extract hostname safely
+  // ---------------------------------------------------------------------------
+  function getHostname(urlStr: string): string {
+    try {
+      return new URL(urlStr).hostname.replace(/^www\./, '');
+    } catch {
+      return '';
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Helper: check if hostname is trusted
+  // ---------------------------------------------------------------------------
+  function isTrustedDomain(hostname: string): boolean {
+    for (const trusted of TRUSTED_POPUP_DOMAINS) {
+      if (hostname === trusted || hostname.endsWith('.' + trusted)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Helper: check if URL matches known ad patterns
+  // ---------------------------------------------------------------------------
+  function isKnownAdUrl(urlStr: string): boolean {
+    const lower = urlStr.toLowerCase();
+    return AD_POPUP_PATTERNS.some(p => lower.includes(p));
+  }
+
+  // ---------------------------------------------------------------------------
+  // Helper: check if called within a trusted gesture window
+  // ---------------------------------------------------------------------------
+  function hasRecentTrustedGesture(): boolean {
+    return (Date.now() - lastTrustedGestureTime) < GESTURE_TIMEOUT_MS;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Toast notification
+  // ---------------------------------------------------------------------------
+  function showPopupToast(
+    urlStr: string,
+    onAllow: () => void,
+    onBlock: () => void
+  ): void {
+    // Remove any existing toast first
+    document.getElementById('echo-popup-toast')?.remove();
+
+    const hostname = getHostname(urlStr) || urlStr.substring(0, 40);
+
+    const toast = document.createElement('div');
+    toast.id = 'echo-popup-toast';
+    toast.style.cssText = `
+      position: fixed !important;
+      bottom: 24px !important;
+      right: 24px !important;
+      z-index: 2147483647 !important;
+      background: #0f1117 !important;
+      border: 1px solid rgba(77,255,188,0.25) !important;
+      border-radius: 14px !important;
+      padding: 14px 16px !important;
+      color: #e2e8f0 !important;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+      font-size: 13px !important;
+      max-width: 300px !important;
+      min-width: 260px !important;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(77,255,188,0.08) !important;
+      animation: echo-toast-in 0.2s cubic-bezier(0.34,1.56,0.64,1) !important;
+      pointer-events: all !important;
+    `;
+
+    toast.innerHTML = `
+      <style>
+        @keyframes echo-toast-in {
+          from { transform: translateY(12px) scale(0.96); opacity: 0; }
+          to   { transform: translateY(0) scale(1);       opacity: 1; }
+        }
+        #echo-popup-toast * { box-sizing: border-box !important; }
+      </style>
+      <div style="display:flex;align-items:flex-start;gap:10px;">
+        <div style="width:32px;height:32px;border-radius:8px;background:rgba(77,255,188,0.1);border:1px solid rgba(77,255,188,0.2);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:15px;">🛡️</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:700;color:#4dffbc;font-size:11px;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px;">Echo — Popup Blocked</div>
+          <div style="color:#94a3b8;font-size:12px;margin-bottom:10px;line-height:1.4;">
+            <strong style="color:#cbd5e1;">${hostname}</strong> wants to open a new window
+          </div>
+          <div style="display:flex;gap:6px;">
+            <button id="echo-popup-allow" style="
+              flex:1;padding:7px 10px;border-radius:8px;border:1px solid rgba(77,255,188,0.3);
+              background:rgba(77,255,188,0.12);color:#4dffbc;
+              font-size:12px;font-weight:600;font-family:inherit;cursor:pointer;
+              transition:background 0.15s;
+            " onmouseover="this.style.background='rgba(77,255,188,0.22)'" 
+              onmouseout="this.style.background='rgba(77,255,188,0.12)'">
+              Allow
+            </button>
+            <button id="echo-popup-block" style="
+              flex:1;padding:7px 10px;border-radius:8px;border:1px solid rgba(239,68,68,0.25);
+              background:rgba(239,68,68,0.08);color:#f87171;
+              font-size:12px;font-weight:600;font-family:inherit;cursor:pointer;
+              transition:background 0.15s;
+            " onmouseover="this.style.background='rgba(239,68,68,0.18)'" 
+              onmouseout="this.style.background='rgba(239,68,68,0.08)'">
+              Block
+            </button>
+          </div>
+          <div style="margin-top:7px;font-size:10px;color:#475569;text-align:center;">
+            Auto-blocking in <span id="echo-popup-countdown">8</span>s
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(toast);
+
+    // Countdown timer
+    let secondsLeft = 8;
+    const countdownEl = toast.querySelector('#echo-popup-countdown') as HTMLElement;
+    const countdownInterval = setInterval(() => {
+      secondsLeft--;
+      if (countdownEl) countdownEl.textContent = secondsLeft.toString();
+    }, 1000);
+
+    // Auto-block after 8 seconds
+    const autoTimer = setTimeout(() => {
+      clearInterval(countdownInterval);
+      toast.remove();
+      onBlock();
+    }, 8000);
+
+    const cleanup = () => {
+      clearTimeout(autoTimer);
+      clearInterval(countdownInterval);
+      toast.remove();
+    };
+
+    toast.querySelector('#echo-popup-allow')!.addEventListener('click', () => {
+      cleanup();
+      onAllow();
+    });
+
+    toast.querySelector('#echo-popup-block')!.addEventListener('click', () => {
+      cleanup();
+      onBlock();
+    });
+  }
+
+  // ---------------------------------------------------------------------------
+  // The intercepted window.open
+  // ---------------------------------------------------------------------------
+  const originalWindowOpen = window.open.bind(window);
 
   window.open = function(
     url?: string | URL,
     target?: string,
     features?: string
   ): Window | null {
-    if (!blockingEnabled) return originalWindowOpen.call(window, url, target, features);
 
-    const urlStr = (url || '').toString().toLowerCase();
-    const isAdUrl =
-      urlStr.includes('ad.') ||
-      urlStr.includes('/ads/') ||
-      urlStr.includes('doubleclick') ||
-      urlStr.includes('googlesyndication') ||
-      urlStr.includes('click.') ||
-      urlStr.includes('popup') ||
-      urlStr.includes('popunder') ||
-      urlStr.includes('track.') ||
-      urlStr.includes('redirect') ||
-      urlStr.includes('aff=') ||
-      urlStr.includes('affiliate') ||
-      urlStr.includes('banner') ||
-      urlStr.includes('promo');
+    if (!blockingEnabled) {
+      return originalWindowOpen(url, target, features);
+    }
 
-    const isClickHijack = !url || urlStr === '' || urlStr === 'about:blank';
-    const hasUserGesture = (navigator as any).userActivation?.isActive;
+    const urlStr = (url || '').toString().trim();
 
-    if (isAdUrl || isClickHijack || !hasUserGesture) {
-      console.log('[Echo AdBlock] ✓ Blocked popup:', urlStr.substring(0, 60) || 'empty/hijack');
+    // 1. Empty or about:blank — classic click hijacking, silent block
+    if (!urlStr || urlStr === '' || urlStr.toLowerCase() === 'about:blank') {
+      console.log('[Echo PopupBlocker] ✓ Silently blocked click hijack popup');
       return null;
     }
 
-    return originalWindowOpen.call(window, url, target, features);
+    // 2. Known ad URL pattern — silent block
+    if (isKnownAdUrl(urlStr)) {
+      console.log('[Echo PopupBlocker] ✓ Silently blocked ad popup:', urlStr.substring(0, 80));
+      return null;
+    }
+
+    const hostname = getHostname(urlStr);
+
+    // 3. Trusted domain — allow immediately, no toast
+    if (isTrustedDomain(hostname)) {
+      console.log('[Echo PopupBlocker] ✓ Allowed trusted popup:', hostname);
+      return originalWindowOpen(url, target, features);
+    }
+
+    // 4. Recent genuine user gesture (AdGuard PopupBlocker core technique)
+    // If the user genuinely clicked something in the last 1 second, allow it
+    if (hasRecentTrustedGesture()) {
+      console.log('[Echo PopupBlocker] ✓ Allowed gesture-triggered popup:', hostname);
+      return originalWindowOpen(url, target, features);
+    }
+
+    // 5. No recent gesture and not a known ad or trusted site
+    // Show toast — let the user decide (AdGuard-style notification)
+    console.log('[Echo PopupBlocker] ⚠ Intercepted ambiguous popup:', urlStr.substring(0, 80));
+
+    showPopupToast(
+      urlStr,
+      () => {
+        // User clicked Allow
+        console.log('[Echo PopupBlocker] User allowed popup:', hostname);
+        originalWindowOpen(url, target, features);
+      },
+      () => {
+        // User clicked Block or toast timed out
+        console.log('[Echo PopupBlocker] User blocked popup:', hostname);
+      }
+    );
+
+    return null;
+  };
+
+  // ---------------------------------------------------------------------------
+  // Also intercept setTimeout/setInterval delayed popups
+  // ---------------------------------------------------------------------------
+  const originalSetTimeout = window.setTimeout.bind(window);
+  const originalSetInterval = window.setInterval.bind(window);
+
+  (window as any).setTimeout = function(
+    fn: TimerHandler,
+    delay?: number,
+    ...args: any[]
+  ): number {
+    const capturedGestureTime = lastTrustedGestureTime;
+    return originalSetTimeout(function() {
+      // If this setTimeout inherited a gesture timestamp from before it was
+      // scheduled, reset it so window.open inside cannot abuse it
+      if (lastTrustedGestureTime === capturedGestureTime && delay && delay > 100) {
+        lastTrustedGestureTime = 0;
+      }
+      if (typeof fn === 'function') {
+        fn(...args);
+      } else {
+        // String-based setTimeout (eval) — just run it
+        (new Function(fn as string))();
+      }
+    }, delay);
+  };
+
+  (window as any).setInterval = function(
+    fn: TimerHandler,
+    delay?: number,
+    ...args: any[]
+  ): number {
+    return originalSetInterval(function() {
+      if (delay && delay > 100) {
+        lastTrustedGestureTime = 0;
+      }
+      if (typeof fn === 'function') {
+        fn(...args);
+      }
+    }, delay);
   };
 
   // ===========================================

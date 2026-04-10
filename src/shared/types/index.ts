@@ -36,3 +36,27 @@ export interface EchoStorage {
   cookieBannersHandled?: number;
   allowlistedSites?: string[];
 }
+
+export type CookiePreference = 'essential' | 'all' | 'block';
+
+export interface CookieBannerState {
+  hostname: string;
+  detectedAt: string;
+  handled: boolean;
+}
+
+export interface EchoStorage {
+  isProtectionOn: boolean;
+  trackerMetadata: Record<string, { owner: string; category: string }>;
+  detectedTrackers: TrackerEvent[];
+  trackersBlocked: number;
+  isAdBlockingOn: boolean;
+  adsBlocked?: number;
+  isCookieBannerBlockingOn: boolean;
+  cookieBannersHandled?: number;
+  allowlistedSites?: string[];
+  // Cookie banner state per active tab (tabId → state)
+  cookieBannerState?: Record<number, CookieBannerState>;
+  // Saved preferences per hostname
+  cookiePreferences?: Record<string, CookiePreference>;
+}

@@ -7,15 +7,16 @@ const root = process.cwd();
 export default defineConfig({
   plugins: [react()],
   build: {
+    minify: false,
+    modulePreload: false,
     rollupOptions: {
+      treeshake: false, 
       input: {
-        // Renamed index.html to popup.html
         popup: resolve(root, 'popup.html'),
         dashboard: resolve(root, 'dashboard.html'),
         onboarding: resolve(root, 'onboarding.html'),
         background: resolve(root, 'src/background/index.ts'),
         cookiebanner: resolve(root, 'src/content/cookiebanner.ts'),
-        // Ad blocker split into two scripts for CSP bypass
         'adblocker-main': resolve(root, 'src/content/adblocker-main.ts'),
         'adblocker-isolated': resolve(root, 'src/content/adblocker-isolated.ts'),
       },
@@ -24,6 +25,7 @@ export default defineConfig({
         chunkFileNames: 'assets/[name].js',
         assetFileNames: 'assets/[name].[ext]',
       },
+      preserveEntrySignatures: 'strict',
     },
   },
 })

@@ -11,6 +11,17 @@ interface ExtensionPopupProps {
   onOpenDashboard: (tab: DashboardTab) => void;
   persona?: string;
   confidenceScore?: number;
+  cookieBannerState?: {
+    hostname: string;
+    analysis: {
+      hasRejectAll: boolean;
+      hasEssentialOnly: boolean;
+      hasAcceptAll: boolean;
+      isSafeToHide: boolean;
+    };
+    resolved: boolean;
+  } | null;
+  onCookiePreference?: (preference: 'essential' | 'all' | 'block') => void;
 }
 
 export const ExtensionPopup: React.FC<ExtensionPopupProps> = ({
@@ -21,13 +32,24 @@ export const ExtensionPopup: React.FC<ExtensionPopupProps> = ({
   onOpenDashboard,
   persona = '',
   confidenceScore = 0,
+  cookieBannerState = null,
+  onCookiePreference,
 }) => {
   const [explanation, setExplanation] = useState<AdExplanation | null>(null);
   const [showExplanation, setShowExplanation] = useState(false);
   const [currentHost, setCurrentHost] = useState<string>('');
   const [isSiteAllowlisted, setIsSiteAllowlisted] = useState(false);
   const [allowlistLoading, setAllowlistLoading] = useState(false);
+  const [showCookieDetails, setShowCookieDetails] = useState(false);
+  const [cookieResolved, setCookieResolved] = useState(false);
+  const [chosenPreference, setChosenPreference] = useState<string | null>(null);
 
+  const handleCookieChoice = (preference: 'essential' | 'all' | 'block') => {
+    setChosenPreference(preference);
+    setCookieResolved(true);
+    setShowCookieDetails(false);
+    onCookiePreference?.(preference);
+  };
   // Resolve current tab hostname and check allowlist status
   useEffect(() => {
     if (typeof chrome === 'undefined' || !chrome.tabs) return;
@@ -165,6 +187,139 @@ export const ExtensionPopup: React.FC<ExtensionPopupProps> = ({
         </div>
       </div>
 
+      {/* COOKIE BANNER CARD*/}
+      {cookieBannerState && !cookieBannerState.resolved && !cookieResolved && (
+        <div className="mx-3 mb-3">
+          {!showCookieDetails ? (
+            // Image 2 — Analysis card
+            <div className="rounded-xl bg-surface-card border border-amber-500/30 p-3">
+              <div className="flex items-start gap-2.5">
+                <div className="w-7 h-7 rounded-full bg-amber-500/15 border border-amber-500/30 flex items-center justify-center shrink-0 mt-0.5">
+                  <span className="text-sm">🍪</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[11px] font-bold text-amber-400 uppercase tracking-wide mb-1">
+                    Echo Analysis
+                  </div>
+                  <p className="text-[11px] text-text-secondary leading-relaxed mb-2">
+                    This site wants to use{' '}
+                    <strong className="text-text-primary">
+                      {cookieBannerState.analysis.hasAcceptAll && !cookieBannerState.analysis.hasRejectAll
+                        ? 'marketing cookies'
+                        : 'tracking cookies'}
+                    </strong>{' '}
+                    to follow your browsing activity here and on other websites.
+                  </p>
+                  <button
+                    onClick={() => setShowCookieDetails(true)}
+                    className="text-[11px] text-accent-primary font-medium hover:underline"
+                  >
+                    More details →
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            // Image 3 — Privacy level selector
+            <div className="rounded-xl bg-surface-card border border-border-subtle overflow-hidden">
+              {/* Header */}
+              <div className="flex items-center justify-between px-3 pt-3 pb-2 border-b border-border-subtle">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm">🛡️</span>
+                  <span className="text-[12px] font-bold text-text-primary">Select Privacy Level</span>
+                </div>
+                <button
+                  onClick={() => setShowCookieDetails(false)}
+                  className="text-text-muted hover:text-text-primary transition-colors text-[11px]"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Option 1 — Essential only (recommended) */}
+              <button
+                onClick={() => handleCookieChoice('essential')}
+                className="w-full flex items-start gap-2.5 px-3 py-2.5 hover:bg-surface-cardAlt transition-colors text-left border-b border-border-subtle group"
+              >
+                <div className="w-4 h-4 rounded-full border-2 border-accent-primary bg-accent-primary/20 flex items-center justify-center shrink-0 mt-0.5">
+                  <div className="w-1.5 h-1.5 rounded-full bg-accent-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[11px] font-semibold text-text-primary">
+                    Allow only essential cookies
+                  </div>
+                  <div className="text-[10px] text-text-muted leading-relaxed">
+                    Site will still work, but fewer adverts follow you.
+                  </div>
+                </div>
+              </button>
+
+              {/* Option 2 — Allow all */}
+              <button
+                onClick={() => handleCookieChoice('all')}
+                className="w-full flex items-start gap-2.5 px-3 py-2.5 hover:bg-surface-cardAlt transition-colors text-left border-b border-border-subtle"
+              >
+                <div className="w-4 h-4 rounded-full border-2 border-border-strong flex items-center justify-center shrink-0 mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <div className="text-[11px] font-semibold text-text-primary">
+                    Allow all cookies
+                  </div>
+                  <div className="text-[10px] text-text-muted leading-relaxed">
+                    May be used for personalised adverts and analytics.
+                  </div>
+                </div>
+              </button>
+
+              {/* Option 3 — Block tracking */}
+              <button
+                onClick={() => handleCookieChoice('block')}
+                className="w-full flex items-start gap-2.5 px-3 py-2.5 hover:bg-surface-cardAlt transition-colors text-left"
+              >
+                <div className="w-4 h-4 rounded-full border-2 border-accent-critical/50 flex items-center justify-center shrink-0 mt-0.5">
+                  <span className="text-[8px] text-accent-critical">✕</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[11px] font-semibold text-accent-critical">
+                    Block tracking cookies from this site
+                  </div>
+                  <div className="text-[10px] text-accent-critical/70 leading-relaxed">
+                    Some adverts may not work, but browsing should continue normally.
+                  </div>
+                </div>
+              </button>
+
+              {/* Footer */}
+              <div className="flex items-center justify-between px-3 py-2 bg-surface-inset/50 border-t border-border-subtle">
+                <span className="text-[9px] text-text-muted">Echo v1.0</span>
+                <button className="text-[9px] text-text-muted hover:text-text-primary transition-colors">
+                  Advanced Settings
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* COOKIE RESOLVED — Image 4 confirmation */}
+      {cookieResolved && chosenPreference && (
+        <div className="mx-3 mb-3">
+          <div className="rounded-xl bg-surface-card border border-accent-primary/30 p-3 text-center">
+            <div className="w-8 h-8 rounded-full bg-accent-primary/15 border border-accent-primary/30 flex items-center justify-center mx-auto mb-2">
+              <span className="text-sm">✓</span>
+            </div>
+            <div className="text-[12px] font-bold text-text-primary mb-1">
+              Preferences Saved
+            </div>
+            <div className="text-[10px] text-text-muted leading-relaxed mb-2">
+              Your choice has been saved. You can change it anytime from the Echo icon.
+            </div>
+            <div className="flex items-center justify-center gap-1.5">
+              <span className="text-[9px]">🛡️</span>
+              <span className="text-[10px] text-text-muted">Echo is active in background</span>
+            </div>
+          </div>
+        </div>
+      )}
       {/* PER-SITE ALLOWLIST BUTTON */}
       {isProtectionOn && currentHost && (
         <div className="mx-3 mb-3">

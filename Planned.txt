@@ -1,28 +1,13 @@
 List of problems to fix:
 
--Make sure all the logic regarding off are true and when the app is turned off, all backgrounded services 
-turn off and remain turned off until the user turns it back on.
+-Make sure that cookie banner banner auto-accept necessary only, if none are necessary reject all is prestine.
 
--Make sure all the logic regarding on are true and when the app is turned on, all backgrounded
-services turn on and remain turned on, unless specified elsewhere in the user's settings, 
-until the user turns it back off.
-
--When data is reset in settings page on the dashboard, the extension turns off even though it appears visually on
-
--Make sure that ad blocking and cookie banner blocking is prestine.
-
--Cosmetically removing a banner or advertisment has to work while still ensuring the website runs smoothly.
-
--Add more lists like EasyList filter for ad blocking.
-
--At the end of all implementations and optimisations, make the app as bug free as possible.
+-Youtube ads still appear.
 
 -User feedback: Consider adding "Report broken site" feature.
-
--Clicking on page shows an ad in a seperate window in extreme test.
-
--Outlook emailed attachments cannot be opened or downloaded. Maybe lay off on some rules in certain popular websites?
 
 -Refreshing overview page in the dashboard completely breaks the dashboard.
 
 -Migrate all block lists to MongoDB.
+
+-Add options to allow some minor data collection for product enhancement with full transparency on what is being collected.

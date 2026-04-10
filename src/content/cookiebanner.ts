@@ -1,449 +1,546 @@
 /**
- * Cookie Banner Auto-Handler Content Script
- * Detects and intelligently handles cookie consent dialogs
- * Priority: Accept Necessary Only > Reject All > Hide Banner (LAST RESORT)
+ * cookiebanner.ts
+ * Cookie Banner Detection Content Script
+ *
+ * This script ONLY detects cookie banners and reports them to the background.
+ * It does NOT auto-click anything. The user decides via the popup UI.
+ * When the user makes a choice, the background sends back an instruction
+ * and this script executes it on the actual banner DOM element.
+ *
+ * On return visits, if a saved preference exists for this hostname,
+ * the background sends the instruction directly without showing UI.
+ *
+ * Does NOT interact with allowlisted sites.
  */
 
-import {
-  COOKIE_BANNER_SELECTORS,
-  NECESSARY_ONLY_PATTERNS,
-  ACCEPT_ALL_PATTERNS,
-  SETTINGS_PATTERNS,
-  OVERLAY_SELECTORS
-} from './cookie-filters';
+// ---------------------------------------------------------------------------
+// Cookie filter patterns — inlined to avoid Rollup chunk collision
+// ---------------------------------------------------------------------------
+const COOKIE_BANNER_SELECTORS = [
+  '#cookie-banner', '#cookie-consent', '#cookie-notice', '#cookie-bar',
+  '#cookie-policy', '#cookiebanner', '#cookieconsent', '#cookie-popup',
+  '#cookie-modal', '#gdpr-banner', '#gdpr-consent', '#gdpr-popup',
+  '#consent-banner', '#consent-popup', '#consent-modal', '#privacy-banner',
+  '#privacy-notice', '#privacy-popup', '#cc-window', '#onetrust-banner-sdk',
+  '#onetrust-consent-sdk', '#onetrust-pc-sdk', '#CybotCookiebotDialog',
+  '#CybotCookiebotDialogBody', '#cookieConsentModal', '#sp_message_container',
+  '#didomi-popup', '#didomi-notice', '#didomi-host', '#usercentrics-root',
+  '#cmp-root', '#cmp-container', '#gdpr-cookie-consent', '#cookie_notice',
+  '#cookie-law-info-bar',
+  '.cookie-banner', '.cookie-consent', '.cookie-notice', '.cookie-bar',
+  '.cookie-popup', '.cookie-modal', '.cookie-dialog', '.cookie-wall',
+  '.cookie-overlay', '.gdpr-banner', '.gdpr-consent', '.gdpr-popup',
+  '.consent-banner', '.consent-popup', '.consent-modal', '.consent-dialog',
+  '.privacy-banner', '.privacy-notice', '.cc-window', '.cc-banner',
+  '.cc-dialog', '.cmp-popup', '.cmp-dialog',
+  '[aria-label*="cookie" i]', '[aria-label*="consent" i]',
+  '[aria-label*="privacy" i]', '[aria-describedby*="cookie" i]',
+  '[role="dialog"][aria-label*="cookie" i]',
+  '[role="dialog"][aria-label*="consent" i]',
+  '[role="dialog"][aria-label*="privacy" i]',
+  '[role="alertdialog"][aria-label*="cookie" i]',
+  '[role="region"][aria-label*="cookie" i]',
+  '[role="region"][aria-label*="consent" i]',
+  '[class*="cookie-banner"]', '[class*="cookie-consent"]',
+  '[class*="cookie-notice"]', '[class*="cookie-popup"]',
+  '[class*="cookie-dialog"]', '[class*="cookie-modal"]',
+  '[class*="consent-banner"]', '[class*="consent-dialog"]',
+  '[class*="privacy-banner"]', '[class*="privacy-notice"]',
+  '[class*="cookie-notification"]', '[class*="data-processing"]',
+  '[class*="gdpr-banner"]', '[class*="privacy-consent"]',
+];
 
-const MAX_RETRY_ATTEMPTS = 5;
-const RETRY_DELAY = 800; // ms
-const INITIAL_DELAY = 1500; // Wait for page to load
+const REJECT_ALL_PATTERNS = [
+  /^reject\s+all$/i, /^decline\s+all$/i, /^deny\s+all$/i,
+  /^refuse\s+all$/i, /^reject\s+optional$/i, /^decline\s+optional$/i,
+  /^reject\s+non-essential$/i, /^decline\s+non-essential$/i,
+  /^do\s+not\s+accept$/i, /^i\s+decline$/i, /^no\s+thanks$/i,
+  /^continue\s+without\s+accepting$/i, /^continue\s+without\s+agreeing$/i,
+  /^continue\s+without$/i, /reject\s+all/i, /decline\s+all/i,
+  /deny\s+all/i, /refuse\s+all/i, /reject\s+non-essential/i,
+  /decline\s+non-essential/i,
+  /^alle\s+ablehnen$/i, /^ablehnen$/i, /^nicht\s+akzeptieren$/i,
+  /alle\s+ablehnen/i, /ablehnen/i,
+  /^tout\s+refuser$/i, /^refuser\s+tout$/i,
+  /^continuer\s+sans\s+accepter$/i, /tout\s+refuser/i, /refuser\s+tout/i,
+  /^rechazar\s+todas$/i, /^denegar\s+todas$/i, /^rechazar$/i,
+  /rechazar\s+todas/i,
+  /^rifiuta\s+tutti$/i, /^rifiuta$/i, /rifiuta\s+tutti/i,
+  /^alles\s+weigeren$/i, /^weigeren$/i, /alles\s+weigeren/i,
+  /^rejeitar\s+todos$/i, /^rejeitar$/i, /rejeitar\s+todos/i,
+  /^reject\s+additional\s+cookies$/i,
+  /reject\s+additional/i,
+];
+
+const NECESSARY_ONLY_PATTERNS = [
+  /^necessary\s+only$/i, /^essential\s+only$/i, /^required\s+only$/i,
+  /^only\s+necessary$/i, /^only\s+essential$/i, /^only\s+required$/i,
+  /^accept\s+necessary$/i, /^accept\s+essential$/i, /^accept\s+required$/i,
+  /^use\s+necessary$/i, /^use\s+essential$/i,
+  /^essential\s+cookies?\s+only$/i, /^necessary\s+cookies?\s+only$/i,
+  /necessary\s+only/i, /essential\s+only/i, /accept\s+necessary/i,
+  /accept\s+essential/i, /only\s+necessary/i, /only\s+essential/i,
+  /necessary\s+cookies?\s+only/i, /essential\s+cookies?\s+only/i,
+  /^nur\s+notwendige$/i, /^nur\s+erforderliche$/i,
+  /nur\s+notwendige/i, /nur\s+erforderliche/i,
+  /^seulement\s+nécessaires$/i, /^essentiels\s+seulement$/i,
+  /seulement\s+nécessaires/i,
+  /^solo\s+necesarias$/i, /solo\s+necesarias/i,
+  /^solo\s+necessari$/i, /solo\s+necessari/i,
+  /^alleen\s+noodzakelijk$/i, /alleen\s+noodzakelijk/i,
+  /^apenas\s+necessários$/i, /apenas\s+necessários/i,
+];
+
+const ACCEPT_ALL_PATTERNS = [
+  /^accept\s+all$/i, /^allow\s+all$/i, /^agree\s+to\s+all$/i,
+  /^accept\s+all\s+cookies$/i, /^allow\s+all\s+cookies$/i,
+  /^i\s+agree$/i, /^i\s+accept$/i, /^i\s+consent$/i,
+  /^i\s+understand$/i, /^got\s+it$/i, /^ok$/i, /^okay$/i,
+  /accept\s+all/i, /allow\s+all/i, /agree\s+to\s+all/i,
+  /^alle\s+akzeptieren$/i, /^zustimmen$/i, /^allen\s+zustimmen$/i,
+  /alle\s+akzeptieren/i,
+  /^tout\s+accepter$/i, /^accepter\s+tout$/i, /^j'accepte$/i,
+  /tout\s+accepter/i,
+  /^aceptar\s+todas?$/i, /^aceptar$/i, /aceptar\s+todas/i,
+  /^accetta\s+tutti$/i, /^accettare$/i, /accetta\s+tutti/i,
+  /^alles\s+accepteren$/i, /^akkoord$/i, /alles\s+accepteren/i,
+  /^aceitar\s+todos$/i, /^aceitar$/i, /aceitar\s+todos/i,
+  /^accept\s+additional\s+cookies$/i,
+  /accept\s+additional/i,
+];
+
+const OVERLAY_SELECTORS = [
+  '[class*="cookie"][class*="overlay"]',
+  '[class*="cookie"][class*="backdrop"]',
+  '[class*="consent"][class*="overlay"]',
+  '[class*="consent"][class*="backdrop"]',
+  '.modal-backdrop',
+  '.cdk-overlay-backdrop',
+  '[class*="cookie"][class*="mask"]',
+  '[class*="consent"][class*="mask"]',
+];
+
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+const MAX_ATTEMPTS = 4;
+const RETRY_DELAY_MS = 900;
+const INITIAL_DELAY_MS = 1200;
+const VERIFY_DELAY_MS = 600;
+
+// ---------------------------------------------------------------------------
+// State
+// ---------------------------------------------------------------------------
 const handled = new Set<Element>();
-let observer: MutationObserver | null = null;
-let isEnabled = false;
-let attemptCount = 0;
+let activeBanner: HTMLElement | null = null;
+let cookieObserver: MutationObserver | null = null;
+let cookieEnabled = false;
+let bannerDetected = false;
 
-/**
- * Initialize cookie banner detection
- */
-function init() {
-  console.log('[Echo Cookie] Initializing...');
+// ---------------------------------------------------------------------------
+// Initialisation
+// ---------------------------------------------------------------------------
+function cookieBannerInit(): void {
+  console.log('COOKIE INIT CALLED');
+  chrome.storage.local.get(
+    ['isCookieBannerBlockingOn', 'isProtectionOn', 'allowlistedSites', 'cookiePreferences'],
+    (result) => {
+      if (result.isProtectionOn === false) return;
 
-  // Check if feature is enabled
-  chrome.storage.local.get(['isCookieBannerBlockingOn'], (result) => {
-    isEnabled = result.isCookieBannerBlockingOn !== false;
+      const allowlisted: string[] = result.allowlistedSites || [];
+      const host = window.location.hostname;
+      if (allowlisted.some(site => host === site || host.endsWith('.' + site))) {
+        console.log('[Echo Cookie] Site is allowlisted — standing down');
+        return;
+      }
 
-    if (!isEnabled) {
-      console.log('[Echo Cookie] Disabled via settings');
-      return;
+      cookieEnabled = result.isCookieBannerBlockingOn !== false;
+      if (!cookieEnabled) {
+        console.log('[Echo Cookie] Disabled via settings');
+        return;
+      }
+
+      console.log('[Echo Cookie] Active — starting detection');
+      setTimeout(() => {
+        detect(result.cookiePreferences || {});
+        startObserver(result.cookiePreferences || {});
+      }, INITIAL_DELAY_MS);
     }
+  );
 
-    console.log('[Echo Cookie] Enabled - Starting detection');
-
-    // Wait for page to load, then start detection
-    setTimeout(() => {
-      detectAndHandleBanners();
-      startObserver();
-    }, INITIAL_DELAY);
+  // Listen for instructions from background (user made a choice in popup)
+  chrome.runtime.onMessage.addListener((message) => {
+    if (message.type === 'COOKIE_EXECUTE_PREFERENCE') {
+      executePreference(message.preference);
+    }
   });
 
-  // Listen for storage changes
-  chrome.storage.onChanged.addListener((changes) => {
+  // React to settings changes
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area !== 'local') return;
     if (changes.isCookieBannerBlockingOn) {
-      isEnabled = changes.isCookieBannerBlockingOn.newValue;
-
-      if (isEnabled) {
-        console.log('[Echo Cookie] Enabled via settings');
-        detectAndHandleBanners();
-        startObserver();
-      } else {
-        console.log('[Echo Cookie] Disabled via settings');
-        stopObserver();
-      }
+      cookieEnabled = changes.isCookieBannerBlockingOn.newValue;
+      if (!cookieEnabled) stopObserver();
+    }
+    if (changes.isProtectionOn && changes.isProtectionOn.newValue === false) {
+      cookieEnabled = false;
+      stopObserver();
     }
   });
 }
 
-/**
- * Detect and handle all visible cookie banners
- */
-function detectAndHandleBanners() {
-  if (!isEnabled) return;
+// ---------------------------------------------------------------------------
+// Detection
+// ---------------------------------------------------------------------------
+function detect(savedPreferences: Record<string, string>): void {
+  if (!cookieEnabled) return;
 
-  let foundAny = false;
+  let found = false;
 
   for (const selector of COOKIE_BANNER_SELECTORS) {
     try {
-      const banners = document.querySelectorAll(selector);
-
-      banners.forEach((banner) => {
-        if (!handled.has(banner) && isVisible(banner as HTMLElement)) {
-          console.log(`[Echo Cookie] Banner detected: ${selector}`);
-          foundAny = true;
-          handleCookieBanner(banner as HTMLElement);
+      document.querySelectorAll<HTMLElement>(selector).forEach(banner => {
+        if (!handled.has(banner) && isVisible(banner)) {
+          console.log('[Echo Cookie] Banner found:', selector);
+          found = true;
           handled.add(banner);
+          activeBanner = banner;
+          handleDetection(banner, savedPreferences);
         }
       });
-    } catch (e) {
-      // Invalid selector, skip
+    } catch { /* invalid selector */ }
+  }
+
+  if (!found) textSearch(savedPreferences);
+}
+
+function textSearch(savedPreferences: Record<string, string>): void {
+  const candidates = document.querySelectorAll<HTMLElement>(
+    'div, section, aside, [role="dialog"], [role="alertdialog"], [role="banner"], [role="region"]'
+  );
+
+  for (const el of candidates) {
+    if (handled.has(el) || !isVisible(el)) continue;
+    const text = (el.textContent || '').toLowerCase();
+    const hasCookieLanguage =
+      text.includes('cookie') ||
+      (text.includes('consent') && text.includes('data')) ||
+      (text.includes('privacy') && text.includes('accept'));
+
+      if (hasCookieLanguage && text.length > 80 && text.length < 5000) {
+        // Walk up to find the container that actually has buttons
+        let container: HTMLElement = el;
+        let parent = el.parentElement;
+        while (parent && parent !== document.body) {
+          if (parent.querySelectorAll('button').length > 0) {
+            container = parent;
+            break;
+          }
+          parent = parent.parentElement;
+        }
+        
+        console.log('[Echo Cookie] Banner found via text search');
+        handled.add(container);
+        activeBanner = container;
+        handleDetection(container, savedPreferences);
+        break;
+      }
     }
   }
 
-  // If we didn't find anything with selectors, do a text-based search
-  if (!foundAny && attemptCount < MAX_RETRY_ATTEMPTS) {
-    attemptCount++;
-    setTimeout(() => {
-      searchForBannersInDocument();
-    }, RETRY_DELAY);
+// ---------------------------------------------------------------------------
+// Handle detection — check saved preference first, else notify background
+// ---------------------------------------------------------------------------
+function handleDetection(
+  banner: HTMLElement,
+  savedPreferences: Record<string, string>
+): void {
+  if (bannerDetected) return;
+  bannerDetected = true;
+  const host = window.location.hostname;
+  const saved = savedPreferences[host] as string | undefined;
+
+  if (saved) {
+    // Return visit — apply saved preference silently
+    console.log(`[Echo Cookie] Applying saved preference for ${host}: ${saved}`);
+    executePreference(saved);
+    return;
   }
+
+  // First visit — analyse the banner and notify background
+  const analysis = analyseBanner(banner);
+
+  chrome.runtime.sendMessage({
+    type: 'COOKIE_BANNER_DETECTED',
+    hostname: host,
+    analysis,
+  });
 }
 
-/**
- * Search entire document for cookie-related text
- */
-function searchForBannersInDocument() {
-  const allElements = document.querySelectorAll('div, section, aside, [role="dialog"], [role="banner"], [role="region"]');
+// ---------------------------------------------------------------------------
+// Analyse what options the banner actually offers
+// ---------------------------------------------------------------------------
+function analyseBanner(banner: HTMLElement): {
+  hasRejectAll: boolean;
+  hasEssentialOnly: boolean;
+  hasAcceptAll: boolean;
+  isSafeToHide: boolean;
+} {
+  return {
+    hasRejectAll: !!findButton(banner, REJECT_ALL_PATTERNS),
+    hasEssentialOnly: !!findButton(banner, NECESSARY_ONLY_PATTERNS),
+    hasAcceptAll: !!findButton(banner, ACCEPT_ALL_PATTERNS),
+    isSafeToHide: isSafeToHide(banner),
+  };
+}
 
-  for (const element of allElements) {
-    const text = (element.textContent || '').toLowerCase();
+// ---------------------------------------------------------------------------
+// Execute a preference on the active banner
+// Called either from background relay (user chose in popup) or saved preference
+// ---------------------------------------------------------------------------
+function executePreference(preference: string): void {
+  if (!activeBanner) {
+    console.warn('[Echo Cookie] No active banner to act on');
+    return;
+  }
 
-    // Look for cookie-related keywords with more variations
-    const hasCookieText = text.includes('cookie') ||
-                          text.includes('consent') ||
-                          text.includes('privacy') ||
-                          text.includes('data processing') ||
-                          (text.includes('partners') && (text.includes('cookie') || text.includes('consent'))) ||
-                          text.includes('tracking') ||
-                          text.includes('personal data');
+  const banner = activeBanner;
 
-    if (hasCookieText &&
-        text.length > 50 && text.length < 3000 &&
-        isVisible(element as HTMLElement) &&
-        !handled.has(element)) {
+  switch (preference) {
+    case 'block': {
+      // Reject all tracking — click Reject All button
+      const rejectBtn = findButton(banner, REJECT_ALL_PATTERNS);
+      if (rejectBtn) {
+        console.log('[Echo Cookie] Executing: Reject All');
+        click(rejectBtn);
+        verify(banner, 'block');
+        return;
+      }
+      // Fallback to essential only if no reject all
+      const essentialBtn = findButton(banner, NECESSARY_ONLY_PATTERNS);
+      if (essentialBtn) {
+        console.log('[Echo Cookie] Executing: Essential Only (fallback from block)');
+        click(essentialBtn);
+        verify(banner, 'block');
+        return;
+      }
+      // Nothing to click — hide if safe
+      if (isSafeToHide(banner)) {
+        hide(banner);
+      }
+      break;
+    }
 
-      console.log('[Echo Cookie] Found potential banner via text search:', text.substring(0, 100));
-      handleCookieBanner(element as HTMLElement);
-      handled.add(element);
-      break; // Only handle one at a time
+    case 'essential': {
+      // Essential only — try necessary button first, then reject all
+      const essentialBtn = findButton(banner, NECESSARY_ONLY_PATTERNS);
+      if (essentialBtn) {
+        console.log('[Echo Cookie] Executing: Essential Only');
+        click(essentialBtn);
+        verify(banner, 'essential');
+        return;
+      }
+      const rejectBtn = findButton(banner, REJECT_ALL_PATTERNS);
+      if (rejectBtn) {
+        console.log('[Echo Cookie] Executing: Reject All (fallback for essential)');
+        click(rejectBtn);
+        verify(banner, 'essential');
+        return;
+      }
+      if (isSafeToHide(banner)) {
+        hide(banner);
+      }
+      break;
+    }
+
+    case 'all': {
+      // Accept all — find and click accept all button
+      const acceptBtn = findButton(banner, ACCEPT_ALL_PATTERNS);
+      if (acceptBtn) {
+        console.log('[Echo Cookie] Executing: Accept All');
+        click(acceptBtn);
+        verify(banner, 'all');
+        return;
+      }
+      // No accept all button found — hide
+      if (isSafeToHide(banner)) {
+        hide(banner);
+      }
+      break;
     }
   }
 }
 
-/**
- * Handle a single cookie banner with aggressive clicking
- */
-function handleCookieBanner(banner: HTMLElement, attempt = 1) {
-  console.log(`[Echo Cookie] Handling banner (attempt ${attempt})`, banner.id || banner.className);
-
-  // Priority 1: Find and click "Necessary Only" or "Reject All" button
-  const necessaryButton = findButtonInContainer(banner, NECESSARY_ONLY_PATTERNS);
-  if (necessaryButton) {
-    console.log('[Echo Cookie] ✓ Found "Necessary Only/Reject All" → Clicking');
-    clickButton(necessaryButton);
-
-    // Wait and verify banner is gone
-    setTimeout(() => {
-      if (isVisible(banner)) {
-        console.log('[Echo Cookie] Banner still visible after click, retrying...');
-        if (attempt < MAX_RETRY_ATTEMPTS) {
-          handleCookieBanner(banner, attempt + 1);
-        } else {
-          console.log('[Echo Cookie] Max retries reached → Hiding banner');
-          hideBanner(banner);
-        }
-      } else {
-        console.log('[Echo Cookie] ✓ Banner dismissed successfully');
+// ---------------------------------------------------------------------------
+// Verify banner was dismissed after clicking
+// ---------------------------------------------------------------------------
+function verify(banner: HTMLElement, preference: string): void {
+  setTimeout(() => {
+    if (!isVisible(banner)) {
+      console.log(`[Echo Cookie] ✓ Banner dismissed (${preference})`);
+      restoreScroll();
+      // Notify background so popup can show confirmation
+      chrome.runtime.sendMessage({ type: 'COOKIE_BANNER_RESOLVED' });
+      return;
+    }
+    // Still visible — hide if safe, otherwise accept all as last resort
+    if (isSafeToHide(banner)) {
+      hide(banner);
+    } else {
+      const acceptBtn = findButton(banner, ACCEPT_ALL_PATTERNS);
+      if (acceptBtn) {
+        click(acceptBtn);
+        setTimeout(restoreScroll, VERIFY_DELAY_MS);
       }
-    }, RETRY_DELAY);
-    return;
-  }
-
-  // Priority 2: Try to find settings button to access necessary-only
-  const settingsButton = findButtonInContainer(banner, SETTINGS_PATTERNS);
-  if (settingsButton && attempt <= 2) {
-    console.log('[Echo Cookie] Found settings button → Opening');
-    clickButton(settingsButton);
-
-    // Wait for settings panel to appear, then look for necessary-only
-    setTimeout(() => {
-      // Look in whole document for necessary-only option
-      const necessaryInPanel = findButtonInContainer(document.body, NECESSARY_ONLY_PATTERNS);
-      if (necessaryInPanel) {
-        console.log('[Echo Cookie] ✓ Found "Necessary Only" in settings → Clicking');
-        clickButton(necessaryInPanel);
-
-        // Wait and verify banner is gone
-        setTimeout(() => {
-          if (isVisible(banner)) {
-            console.log('[Echo Cookie] Banner still visible after settings flow → Hiding');
-            hideBanner(banner);
-          }
-        }, RETRY_DELAY);
-      } else {
-        // Try to find and toggle OFF all optional cookie switches/checkboxes
-        const cookieSwitches = document.querySelectorAll('input[type="checkbox"][checked], .toggle[aria-checked="true"]');
-        let toggledAny = false;
-
-        cookieSwitches.forEach(sw => {
-          const label = sw.parentElement?.textContent?.toLowerCase() || '';
-          // Don't disable essential/necessary cookies
-          if (!label.includes('essential') && !label.includes('necessary') && !label.includes('required')) {
-            (sw as HTMLInputElement).click();
-            toggledAny = true;
-          }
-        });
-
-        if (toggledAny) {
-          console.log('[Echo Cookie] Toggled optional cookies OFF');
-        }
-
-        // Look for a save/confirm button
-        const saveButton = findButtonInContainer(document.body, [/save|confirm|continue|save\s+preferences|save\s+settings/i]);
-        if (saveButton) {
-          console.log('[Echo Cookie] Found save button → Clicking');
-          clickButton(saveButton);
-
-          // Wait and check if banner is still visible
-          setTimeout(() => {
-            if (isVisible(banner)) {
-              console.log('[Echo Cookie] Banner still visible → Hiding');
-              hideBanner(banner);
-            }
-          }, RETRY_DELAY);
-        } else {
-          console.log('[Echo Cookie] No save button found → Hiding');
-          hideBanner(banner);
-        }
-      }
-    }, RETRY_DELAY * 3);
-    return;
-  }
-
-  // Priority 3: DON'T click "Accept All" - just hide
-  const acceptAllButton = findButtonInContainer(banner, ACCEPT_ALL_PATTERNS);
-  if (acceptAllButton) {
-    console.log('[Echo Cookie] ⚠ Only "Accept All" found → Hiding banner (NOT clicking)');
-    hideBanner(banner);
-    return;
-  }
-
-  // Priority 4: No recognizable buttons - hide as last resort
-  if (attempt >= 2) {
-    console.log('[Echo Cookie] No buttons found after retries → Hiding banner');
-    hideBanner(banner);
-  } else {
-    // Retry in case buttons haven't rendered yet
-    setTimeout(() => {
-      handleCookieBanner(banner, attempt + 1);
-    }, RETRY_DELAY);
-  }
+    }
+    chrome.runtime.sendMessage({ type: 'COOKIE_BANNER_RESOLVED' });
+  }, VERIFY_DELAY_MS);
 }
 
-/**
- * Find button matching patterns in container and all nested elements
- */
-function findButtonInContainer(container: HTMLElement | Document, patterns: RegExp[]): HTMLElement | null {
-  // Search for buttons, links, and clickable elements
+// ---------------------------------------------------------------------------
+// Safety check
+// ---------------------------------------------------------------------------
+function isSafeToHide(banner: HTMLElement): boolean {
+  const style = window.getComputedStyle(banner);
+  if (style.position === 'fixed' || style.position === 'absolute') return true;
+
+  const rect = banner.getBoundingClientRect();
+  if (rect.height < window.innerHeight * 0.8) return true;
+
+  // Scroll locked — we can restore it ourselves so still safe
+  const bodyOverflow = window.getComputedStyle(document.body).overflow;
+  if (bodyOverflow === 'hidden') return true;
+
+  return false;
+}
+
+function isConsentWall(banner: HTMLElement): boolean {
+  const rect = banner.getBoundingClientRect();
+  const coversViewport =
+    rect.height >= window.innerHeight * 0.9 &&
+    rect.width >= window.innerWidth * 0.9;
+  if (!coversViewport) return false;
+  const scrollLocked = window.getComputedStyle(document.body).overflow === 'hidden';
+  return coversViewport && scrollLocked && !findButton(banner, ACCEPT_ALL_PATTERNS);
+}
+
+// ---------------------------------------------------------------------------
+// Hide banner visually
+// ---------------------------------------------------------------------------
+function hide(banner: HTMLElement): void {
+  banner.style.setProperty('display', 'none', 'important');
+  banner.style.setProperty('visibility', 'hidden', 'important');
+  banner.style.setProperty('opacity', '0', 'important');
+  banner.style.setProperty('pointer-events', 'none', 'important');
+
+  OVERLAY_SELECTORS.forEach(selector => {
+    try {
+      document.querySelectorAll<HTMLElement>(selector).forEach(overlay => {
+        overlay.style.setProperty('display', 'none', 'important');
+      });
+    } catch { /* skip */ }
+  });
+
+  restoreScroll();
+  console.log('[Echo Cookie] Banner hidden');
+}
+
+// ---------------------------------------------------------------------------
+// Restore body scroll
+// ---------------------------------------------------------------------------
+function restoreScroll(): void {
+  const body = document.body;
+  const html = document.documentElement;
+  ['overflow', 'overflow-y'].forEach(prop => {
+    if (window.getComputedStyle(body).getPropertyValue(prop) === 'hidden') {
+      body.style.removeProperty(prop);
+    }
+    if (window.getComputedStyle(html).getPropertyValue(prop) === 'hidden') {
+      html.style.removeProperty(prop);
+    }
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Click a button reliably
+// ---------------------------------------------------------------------------
+function click(el: HTMLElement): void {
+  try {
+    el.click();
+    el.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
+    el.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true }));
+    el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+  } catch { /* silently fail */ }
+}
+
+// ---------------------------------------------------------------------------
+// Find button matching patterns
+// ---------------------------------------------------------------------------
+function findButton(
+  container: HTMLElement | Document,
+  patterns: RegExp[]
+): HTMLElement | null {
   const selectors = [
-    'button',
-    'a[role="button"]',
-    '[role="button"]',
-    'input[type="button"]',
-    'input[type="submit"]',
-    '[onclick]',
-    '.button',
-    '[class*="button"]',
-    '[class*="btn"]'
+    'button', 'a[role="button"]', '[role="button"]',
+    'input[type="button"]', 'input[type="submit"]',
+    '[onclick]', '[class*="button"]', '[class*="btn"]',
   ];
 
   for (const selector of selectors) {
     try {
-      const elements = container.querySelectorAll(selector);
-
-      for (const element of elements) {
-        if (!isVisible(element as HTMLElement)) continue;
-
-        // Get all possible text sources
+      const elements = container.querySelectorAll<HTMLElement>(selector);
+      for (const el of elements) {
+        if (!isVisible(el)) continue;
         const texts = [
-          element.textContent,
-          (element as HTMLElement).innerText,
-          element.getAttribute('aria-label'),
-          element.getAttribute('title'),
-          element.getAttribute('value'),
-          element.getAttribute('alt')
+          el.textContent,
+          el.getAttribute('aria-label'),
+          el.getAttribute('title'),
+          el.getAttribute('value'),
+          el.getAttribute('alt'),
         ].filter(Boolean).map(t => (t || '').trim());
 
         for (const text of texts) {
           for (const pattern of patterns) {
-            if (pattern.test(text)) {
-              console.log(`[Echo Cookie] Button match: "${text.substring(0, 50)}"`);
-              return element as HTMLElement;
-            }
+            if (pattern.test(text)) return el;
           }
         }
       }
-    } catch (e) {
-      // Invalid selector
-    }
+    } catch { /* skip */ }
   }
-
   return null;
 }
 
-/**
- * Click a button with multiple methods for compatibility
- */
-function clickButton(button: HTMLElement) {
-  try {
-    console.log(`[Echo Cookie] Clicking button: "${(button.textContent || '').substring(0, 50)}"`);
-
-    // Method 1: Focus and click
-    button.focus();
-    button.click();
-
-    // Method 2: Mouse events
-    const mouseEvents = ['mousedown', 'mouseup', 'click'];
-    mouseEvents.forEach(eventType => {
-      const event = new MouseEvent(eventType, {
-        view: window,
-        bubbles: true,
-        cancelable: true,
-        buttons: 1
-      });
-      button.dispatchEvent(event);
-    });
-
-    // Method 3: Pointer events (for modern frameworks)
-    const pointerEvent = new PointerEvent('click', {
-      view: window,
-      bubbles: true,
-      cancelable: true
-    });
-    button.dispatchEvent(pointerEvent);
-
-    console.log('[Echo Cookie] ✓ Click dispatched');
-  } catch (error) {
-    console.error('[Echo Cookie] Error clicking button:', error);
-  }
+// ---------------------------------------------------------------------------
+// Visibility check
+// ---------------------------------------------------------------------------
+function isVisible(el: HTMLElement): boolean {
+  if (!el) return false;
+  const style = window.getComputedStyle(el);
+  if (style.display === 'none' || style.visibility === 'hidden') return false;
+  if (parseFloat(style.opacity) === 0) return false;
+  const rect = el.getBoundingClientRect();
+  return rect.width > 0 && rect.height > 0;
 }
 
-/**
- * Hide cookie banner and overlay (LAST RESORT)
- */
-function hideBanner(banner: HTMLElement) {
-  try {
-    console.log('[Echo Cookie] Hiding banner (last resort)');
-
-    // Hide the banner itself
-    banner.style.setProperty('display', 'none', 'important');
-    banner.style.setProperty('visibility', 'hidden', 'important');
-    banner.style.setProperty('opacity', '0', 'important');
-    banner.style.setProperty('pointer-events', 'none', 'important');
-    banner.style.setProperty('z-index', '-9999', 'important');
-    banner.remove(); // Remove from DOM entirely
-
-    // Hide overlays/backdrops
-    for (const selector of OVERLAY_SELECTORS) {
-      try {
-        const overlays = document.querySelectorAll(selector);
-        overlays.forEach((overlay) => {
-          (overlay as HTMLElement).style.setProperty('display', 'none', 'important');
-          (overlay as HTMLElement).remove();
-        });
-      } catch (e) {
-        // Invalid selector
-      }
-    }
-
-    // Restore body scroll
-    if (document.body.style.overflow === 'hidden') {
-      document.body.style.overflow = '';
-    }
-    if (document.documentElement.style.overflow === 'hidden') {
-      document.documentElement.style.overflow = '';
-    }
-
-    // Remove any overflow:hidden from body classes
-    document.body.classList.forEach(cls => {
-      if (cls.includes('no-scroll') || cls.includes('overflow')) {
-        document.body.classList.remove(cls);
-      }
-    });
-
-    console.log('[Echo Cookie] ✓ Banner hidden');
-  } catch (error) {
-    console.error('[Echo Cookie] Error hiding banner:', error);
-  }
+// ---------------------------------------------------------------------------
+// MutationObserver
+// ---------------------------------------------------------------------------
+function startObserver(savedPreferences: Record<string, string>): void {
+  if (cookieObserver) return;
+  cookieObserver = new MutationObserver(() => detect(savedPreferences));
+  const attach = () => {
+    cookieObserver!.observe(document.body, { childList: true, subtree: true });
+  };
+  if (document.body) attach();
+  else document.addEventListener('DOMContentLoaded', attach);
 }
 
-/**
- * Check if element is visible
- */
-function isVisible(element: HTMLElement): boolean {
-  if (!element) return false;
-
-  const style = window.getComputedStyle(element);
-  const rect = element.getBoundingClientRect();
-
-  return style.display !== 'none' &&
-         style.visibility !== 'hidden' &&
-         parseFloat(style.opacity) > 0 &&
-         rect.height > 0 &&
-         rect.width > 0;
+function stopObserver(): void {
+  cookieObserver?.disconnect();
+  cookieObserver = null;
 }
 
-/**
- * Start mutation observer for dynamic banners
- */
-function startObserver() {
-  if (observer || !isEnabled) return;
-
-  let debounceTimer: number | null = null;
-
-  observer = new MutationObserver((mutations) => {
-    // Debounce to avoid excessive checks
-    if (debounceTimer) {
-      clearTimeout(debounceTimer);
-    }
-
-    debounceTimer = window.setTimeout(() => {
-      detectAndHandleBanners();
-    }, 300);
-  });
-
-  observer.observe(document.body, {
-    childList: true,
-    subtree: true,
-    attributes: false
-  });
-
-  console.log('[Echo Cookie] ✓ Observer started');
-}
-
-/**
- * Stop mutation observer
- */
-function stopObserver() {
-  if (observer) {
-    observer.disconnect();
-    observer = null;
-    console.log('[Echo Cookie] Observer stopped');
-  }
-}
-
-// Initialize when DOM is ready
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', init);
-} else {
-  init();
-}
-
-// Also run on URL changes (for SPAs)
-let lastUrl = location.href;
-new MutationObserver(() => {
-  const currentUrl = location.href;
-  if (currentUrl !== lastUrl) {
-    lastUrl = currentUrl;
-    console.log('[Echo Cookie] URL changed, re-checking for banners');
-    handled.clear(); // Reset handled banners on page change
-    attemptCount = 0;
-    setTimeout(() => detectAndHandleBanners(), INITIAL_DELAY);
-  }
-}).observe(document, { subtree: true, childList: true });
+// ---------------------------------------------------------------------------
+// Entry point
+// ---------------------------------------------------------------------------
+cookieBannerInit();

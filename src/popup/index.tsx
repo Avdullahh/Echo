@@ -11,26 +11,50 @@ const PopupApp = () => {
   const [blockedCount, setBlockedCount] = useState(0);
   const [persona, setPersona] = useState<string>('');
   const [confidenceScore, setConfidenceScore] = useState<number>(0);
+  const [cookieBannerState, setCookieBannerState] = useState<{
+    hostname: string;
+    analysis: {
+      hasRejectAll: boolean;
+      hasEssentialOnly: boolean;
+      hasAcceptAll: boolean;
+      isSafeToHide: boolean;
+    };
+    resolved: boolean;
+  } | null>(null);
 
   useEffect(() => {
     if (typeof chrome !== 'undefined' && chrome.storage) {
-      chrome.storage.local.get(['detectedTrackers', 'trackersBlocked', 'isProtectionOn'], (result) => {
-        const trackers = result.detectedTrackers || [];
-        setRealTrackers(trackers);
-        setBlockedCount(result.trackersBlocked || 0);
-        setProtectionOn(result.isProtectionOn !== undefined ? result.isProtectionOn : true);
-
-        const derived = buildProfileFromEvents(trackers);
-        if (derived) {
-          setPersona(derived.persona);
-          setConfidenceScore(derived.confidenceScore);
-        }
+      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        const tabId = tabs[0]?.id;
+        
+        chrome.storage.local.get(
+          ['detectedTrackers', 'trackersBlocked', 'isProtectionOn', 'cookieBannerState'],
+          (result) => {
+            const trackers = result.detectedTrackers || [];
+            setRealTrackers(trackers);
+            setBlockedCount(result.trackersBlocked || 0);
+            setProtectionOn(result.isProtectionOn !== undefined ? result.isProtectionOn : true);
+  
+            const derived = buildProfileFromEvents(trackers);
+            if (derived) {
+              setPersona(derived.persona);
+              setConfidenceScore(derived.confidenceScore);
+            }
+  
+            // Load cookie banner state for active tab
+            if (tabId) {
+              const bannerState = result.cookieBannerState?.[tabId];
+              if (bannerState && !bannerState.resolved) {
+                setCookieBannerState(bannerState);
+              }
+            }
+          }
+        );
       });
     } else {
       setProtectionOn(true);
     }
   }, []);
-
   const handleToggle = (val: boolean) => {
     setProtectionOn(val);
     if (typeof chrome !== 'undefined' && chrome.storage) {
@@ -55,6 +79,16 @@ const PopupApp = () => {
         setProtectionOn={handleToggle}
         persona={persona}
         confidenceScore={confidenceScore}
+        cookieBannerState={cookieBannerState}
+        onCookiePreference={(preference) => {
+          if (!cookieBannerState) return;
+          chrome.runtime.sendMessage({
+            type: 'COOKIE_EXECUTE_PREFERENCE',
+            preference,
+            hostname: cookieBannerState.hostname,
+          });
+          setCookieBannerState(prev => prev ? { ...prev, resolved: true } : null);
+        }}
         onOpenDashboard={(tab) => {
           const targetUrl = `dashboard.html#${tab}`;
           if (typeof chrome !== 'undefined' && chrome.tabs) {
