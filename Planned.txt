@@ -1,13 +1,10 @@
 List of problems to fix:
 
--Make sure that cookie banner banner auto-accept necessary only, if none are necessary reject all is prestine.
-
 -Youtube ads still appear.
-
--User feedback: Consider adding "Report broken site" feature.
 
 -Refreshing overview page in the dashboard completely breaks the dashboard.
 
 -Migrate all block lists to MongoDB.
 
 -Add options to allow some minor data collection for product enhancement with full transparency on what is being collected.
+

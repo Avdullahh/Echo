@@ -55,7 +55,7 @@ export interface EchoStorage {
   isCookieBannerBlockingOn: boolean;
   cookieBannersHandled?: number;
   allowlistedSites?: string[];
-  // Cookie banner state per active tab (tabId → state)
+  // Cookie banner state per active tab 
   cookieBannerState?: Record<number, CookieBannerState>;
   // Saved preferences per hostname
   cookiePreferences?: Record<string, CookiePreference>;
