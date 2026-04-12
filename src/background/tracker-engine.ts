@@ -6,7 +6,7 @@
 
 import { BlocklistRule } from '../shared/types';
 
-const API_ENDPOINT = 'http://localhost:3000/api/blocklist';
+const API_ENDPOINT = 'https://echo-6k19.onrender.com/api/blocklist';
 const ALLOWLIST_RULE_ID_BASE = 480000;
 
 export async function refreshBlocklist(): Promise<void> {

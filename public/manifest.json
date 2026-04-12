@@ -60,7 +60,7 @@
     }
   ],
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self'; connect-src 'self' http://localhost:3000"
+    "extension_pages": "script-src 'self'; object-src 'self'; connect-src 'self' https://echo-6k19.onrender.com/api/blocklist"
   },
   "background": {
     "service_worker": "assets/background.js",

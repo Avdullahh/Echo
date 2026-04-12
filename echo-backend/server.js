@@ -366,7 +366,7 @@ app.get('/api/adblock/refresh', async (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`🚀 Echo Backend running at http://localhost:${PORT}`);
+  console.log(`🚀 Echo Backend running at: ${PORT}`);
 });
 
 app.post('/api/seed/turtlecute', async (req, res) => {
