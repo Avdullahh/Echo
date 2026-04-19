@@ -1,43 +1,23 @@
-# Echo - Privacy Dashboard
+# Echo
 
-**Project Report: Realization Phase**
+Privacy visualisation browser extension.
 
-Echo is a browser extension designed to visualize digital identity and tracking in real-time. It provides users with immediate feedback via a "Traffic Light" system and deep insights via a "Digital Identity" dashboard.
+## Repository contents
+Source-code and commit-history evidence.
 
-## Technology Stack
+**Extension** — React 18, TypeScript, Tailwind, Vite, Chrome Manifest V3
 
-*   **Frontend:** React 18, TypeScript
-*   **Styling:** Tailwind CSS
-*   **Build Tool:** Vite
-*   **Platform:** Web Extension (Manifest V3)
+- `src/background/` MV3 service worker: `declarativeNetRequest` rule registration, tracker deduplication, per-site allowlist, 60-minute blocklist refresh via Chrome alarms (Section 3.3.1)
+- `src/shared/` cross-context types and services, including the local ProfileEngine in `services/profileUtils.ts` (Sections 3.3.2, 3.3.3)
+- `src/content/` content scripts: `cookiebanner.ts` for detection and consent handling, plus `adblocker-main.ts` and `adblocker-isolated.ts` running in separate execution contexts to bypass anti-adblock detection (Section 3.3.4)
+- `src/popup/`, `src/components/`, `src/App.tsx` popup and dashboard UI (Section 3.3.5)
+- `popup.html`, `dashboard.html`, `onboarding.html` Vite entry points
+- `vite.config.ts` build configuration; `minify` and `treeshake` disabled to preserve content-script scope isolation
 
-## Development Setup
+**Backend** (`echo-backend/`) — Node.js, Express, Mongoose, MongoDB Atlas. Distributes the curated DuckDuckGo Tracker Data Set blocklist. No user data crosses this boundary.
 
-To set up the development environment locally:
+**Build tooling**
+- `scripts/generate-adblock-rules.js` and `scripts/generate-cosmetic-rules.js` compile EasyList, EasyPrivacy, and annoyance filters into `declarativeNetRequest` JSON and cosmetic-hiding CSS
+- `public/rules/` compiled blocklist outputs bundled with the extension (`easylist_rules.json`, `easyprivacy_rules.json`, `adblock_rules.json`, `annoyances_rules.json`, `exception_rules.json`, `cosmetic-generic.css`, `cosmetic-domains.json`)
 
-1.  **Install Node.js:** Ensure Node.js (v16+) is installed.
-2.  **Install Dependencies:**
-    ```bash
-    npm install
-    ```
-3.  **Run Development Server:**
-    ```bash
-    npm run dev
-    ```
-4.  **Build for Production:**
-    ```bash
-    npm run build
-    ```
 
-## Project Structure
-
-*   `components/` - Reusable UI widgets (TrafficLight, Popup, Dashboard).
-*   `services/` - Logic for tracking detection and profile analysis.
-*   `types.ts` - TypeScript definitions for data models.
-*   `manifest.json` - (To be generated) Extension configuration.
-
-## Key Features Implemented
-
-1.  **Traffic Light Indicator:** Visual risk assessment (Green/Amber/Red).
-2.  **Privacy Controls:** User ability to allow/block trackers.
-3.  **Digital Persona:** Visualization of how algorithms perceive the user (e.g., "Tech-Savvy Foodie").
