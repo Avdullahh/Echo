@@ -162,35 +162,6 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 });
 
 // NOTE: onRuleMatchedDebug only fires in unpacked extensions with Developer
-// Mode enabled. Expected for FYP evaluation — see report section 3.x.
-chrome.declarativeNetRequest.onRuleMatchedDebug.addListener(async (info) => {
-  const match = info.request;
-  const domain = new URL(match.url).hostname;
-
-  if (isDuplicate(domain)) return;
-
-  const store = await chrome.storage.local.get(['trackerMetadata']);
-  const meta = store.trackerMetadata?.[domain] ?? null;
-
-  let sourceWebsite = 'Unknown';
-  try {
-    if (match.initiator) sourceWebsite = new URL(match.initiator).hostname;
-  } catch {
-    sourceWebsite = 'Unknown';
-  }
-
-  const event: TrackerEvent = {
-    id: Date.now(),
-    domain,
-    sourceWebsite,
-    company: meta?.owner ?? 'Unknown',
-    riskLevel: RiskLevel.WARNING,
-    action: 'Blocked',
-    timestamp: new Date().toISOString(),
-  };
-
-  await logTrackerEvent(event);
-});
 
 chrome.declarativeNetRequest.onRuleMatchedDebug.addListener(async (info) => {
   const match = info.request;
@@ -198,7 +169,8 @@ chrome.declarativeNetRequest.onRuleMatchedDebug.addListener(async (info) => {
 
   if (isDuplicate(domain)) return;
 
-  const store = await chrome.storage.local.get(['trackerMetadata']);
+  const store = await chrome.storage.local.get(['isProtectionOn', 'trackerMetadata']);
+  if (store.isProtectionOn === false) return;
   const meta = store.trackerMetadata?.[domain] ?? null;
 
   let sourceWebsite = 'Unknown';
@@ -223,3 +195,67 @@ chrome.declarativeNetRequest.onRuleMatchedDebug.addListener(async (info) => {
 
   await logTrackerEvent(event);
 });
+
+chrome.webRequest.onBeforeRequest.addListener(
+  (details) => {
+    void (async () => {
+      // Ignore top-level navigations — we only care about sub-resources
+      if (details.type === 'main_frame') return;
+
+      let domain: string;
+      try {
+        domain = new URL(details.url).hostname;
+      } catch {
+        return;
+      }
+
+      const store = await chrome.storage.local.get([
+        'isProtectionOn',
+        'trackerMetadata',
+        'allowlistedSites',
+      ]);
+      if (store.isProtectionOn === false) return;
+
+      // Subdomain walker: match "stats.g.doubleclick.net" against "doubleclick.net"
+      const metadata = store.trackerMetadata || {};
+      let meta = null;
+      const parts = domain.split('.');
+      for (let i = 0; i < parts.length - 1; i++) {
+        const candidate = parts.slice(i).join('.');
+        if (metadata[candidate]) {
+          meta = metadata[candidate];
+          break;
+        }
+      }
+      if (!meta) return;
+
+      if (isDuplicate(domain)) return;
+
+      let sourceWebsite = 'Unknown';
+      if (details.initiator) {
+        try {
+          sourceWebsite = new URL(details.initiator).hostname;
+        } catch {
+          sourceWebsite = 'Unknown';
+        }
+      }
+
+      const allowlistedSites: string[] = store.allowlistedSites || [];
+      const isAllowlisted = allowlistedSites.includes(sourceWebsite);
+
+      const event: TrackerEvent = {
+        id: Date.now(),
+        domain,
+        sourceWebsite,
+        company: meta.owner ?? 'Unknown',
+        riskLevel: isAllowlisted ? RiskLevel.SAFE : RiskLevel.WARNING,
+        action: isAllowlisted ? 'Allowed' : 'Blocked',
+        timestamp: new Date().toISOString(),
+      };
+
+      await logTrackerEvent(event);
+    })();
+  },
+  { urls: ['<all_urls>'] },
+  []
+);

@@ -38,8 +38,7 @@ const COSMETIC_AD_SELECTORS = [
   '[class*="video-ad-overlay"]',
   '[class*="preroll-ad"]',
   '[class*="ima-ad-container"]',
-  '.ytp-ad-module',
-  '.ytp-ad-overlay-container',
+
   // Banner ads — specific iframe sources only
   'iframe[src*="doubleclick.net/"]',
   'iframe[src*="googlesyndication.com/"]',

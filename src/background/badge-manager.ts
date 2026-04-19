@@ -22,3 +22,5 @@ export function setBadgeCount(count: number): void {
   export function clearBadge(): void {
     chrome.action.setBadgeText({ text: '' });
   }
+
+  

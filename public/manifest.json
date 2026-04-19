@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Echo - Privacy Dashboard",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "User Online Data Reflection and Analysis Tool",
   "permissions": [
     "storage",
@@ -9,6 +9,7 @@
     "tabs",
     "declarativeNetRequest",
     "declarativeNetRequestFeedback",
+    "webRequest",
     "declarativeNetRequestWithHostAccess"
   ],
   "host_permissions": [

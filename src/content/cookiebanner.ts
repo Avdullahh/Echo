@@ -171,6 +171,7 @@ function cookieBannerInit(): void {
   // Listen for instructions from background (user made a choice in popup)
   chrome.runtime.onMessage.addListener((message) => {
     if (message.type === 'COOKIE_EXECUTE_PREFERENCE') {
+      if (!cookieEnabled) return;
       executePreference(message.preference);
     }
   });
@@ -183,6 +184,7 @@ function cookieBannerInit(): void {
       if (!cookieEnabled) stopObserver();
     }
     if (changes.isProtectionOn && changes.isProtectionOn.newValue === false) {
+      bannerDetected = false;
       cookieEnabled = false;
       stopObserver();
     }
@@ -228,7 +230,6 @@ function textSearch(savedPreferences: Record<string, string>): void {
       (text.includes('privacy') && text.includes('accept'));
 
       if (hasCookieLanguage && text.length > 80 && text.length < 5000) {
-        // Walk up to find the container that actually has buttons
         let container: HTMLElement = el;
         let parent = el.parentElement;
         while (parent && parent !== document.body) {
@@ -316,6 +317,7 @@ function executePreference(preference: string): void {
   switch (preference) {
     case 'block': {
       const rejectBtn = findBtn(REJECT_ALL_PATTERNS);
+      if (!cookieEnabled) return;
       if (rejectBtn) {
         console.log('[Echo Cookie] Executing: Reject All');
         click(rejectBtn);
